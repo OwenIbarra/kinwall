@@ -1,6 +1,6 @@
 # Newscast
 
-Newscast is a calm digest of what the family did and shared: chores done, rewards given, new photos and drawings, books finished, memories, birthdays, and short announcements anyone can post. It's the fourth tab on Home: **Board | Calendar | Schedule | Newscast**.
+Newscast is a calm digest of what the family did and shared: chores done, rewards given, new photos and drawings, books finished, memories, birthdays, and short announcements anyone can post. It's the second of Home's two tabs: **Board | Newscast**.
 
 The [bell](notifications.md) is for things to act on (reminders, summaries, messages). Newscast is for things to notice and celebrate. Nothing in it needs an answer, it never sends a push, and it has no unread badge.
 
@@ -10,11 +10,10 @@ The [bell](notifications.md) is for things to act on (reminders, summaries, mess
 
 ## Opening it
 
-* **Tablets, computers and wall screens**: tap **Newscast** in Home's view tabs.
-* **Phones**: tap the view button under the header (like **Board ⌄**) and pick **Newscast: what the family did and shared**.
+* Tap **Newscast** in Home's **Board | Newscast** switch, on any device.
 * A display can be locked to it: **Settings → General → This display → Lock view → Newscast**. See [This display](../settings/this-display.md).
 
-Turning **Newscast** off in [Settings → General → Features](../settings/general.md#features) hides the tab everywhere (a screen locked to it shows the Board) and the Newscast API answers 404. Posts and reactions already saved are kept until they age out.
+Turning **Newscast** off in [Settings → General → Features](../settings/general.md#features) hides the tab everywhere (with it Home's switch, and a screen locked to it shows the Board) and the Newscast API answers 404. Posts and reactions already saved are kept until they age out.
 
 ## What shows up
 

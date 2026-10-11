@@ -8,7 +8,7 @@ import { dateKey, minutesSinceMidnight, zonedDayKey } from './date.ts'
 import { formatTime } from './timeFormat.ts'
 import { inkFor } from './color.ts'
 import Sheet from './Sheet.tsx'
-import { BoardViewIcon, NewscastIcon, CalendarIcon, CheckIcon, ChevronDown, ChevronLeft, ChevronRight, DayViewIcon, EyeIcon, ListIcon, ThreeDayViewIcon, EyeOffIcon, FilterIcon, LocationIcon, PlusIcon, RepeatIcon, TrashIcon, EditIcon } from './icons.tsx'
+import { CalendarIcon, CheckIcon, ChevronDown, ChevronLeft, ChevronRight, DayViewIcon, EyeIcon, ListIcon, ThreeDayViewIcon, EyeOffIcon, FilterIcon, SlidersIcon, LocationIcon, PlusIcon, RepeatIcon, TrashIcon, EditIcon } from './icons.tsx'
 import { hideLikeThis, NO_FILTER, type CalendarFilter } from './calendarFilter.ts'
 import { IDLE_RESET_EVENT } from './App.tsx'
 import { SHORT_LANDSCAPE, SHORT_TABLET, useIsPhone, useMediaQuery, useScreenK } from './useIsPhone.ts'
@@ -22,9 +22,9 @@ import NotesThread, { Linkified } from './NotesThread.tsx'
 import { EventOrders } from './MealQuickSheet.tsx'
 import { mealEventStatus } from './meal-date.ts'
 import Board from './Board.tsx'
-import { BoardLayoutPicker } from './BoardEditor.tsx'
+import { LayoutChips } from './BoardEditor.tsx'
 import SnapshotSheet from './Snapshot.tsx'
-import { hashQuery } from './hashQuery.ts'
+import { hashPath, hashQuery } from './hashQuery.ts'
 import { eventDraft, outingExtras, type OutingExtras } from './eventDraft.ts'
 import { addMinutes, endAfterStartMove } from './eventEnd.ts'
 import { PollSheet, PollsButton } from './Polls.tsx'
@@ -36,7 +36,7 @@ import { calendarGoal } from './tempCheck.ts'
 import { leadBy, leadIcon, leadOf, leadText } from './leadTime.ts'
 import { dedupeEvents, eventPeople, hourPx, layoutDay, newEventDay, newEventStart } from './dayLayout.ts'
 import NewscastView from './Newscast.tsx'
-import { CALENDAR_VIEWS, dayOrigin, isCalendarView, lastCalendarView, monthDayLabel, rememberCalendarView, tabOf, viewForTab, viewHint, viewLabel, viewTabs, type CalendarView, type ViewMode } from './calendarViews.ts'
+import { CALENDAR_VIEWS, HOME_VIEWS, dayOrigin, isCalendarView, isHomeView, lastCalendarView, linkedCalendarView, monthDayLabel, rememberCalendarView, viewHint, viewLabel, type CalendarView, type ViewMode } from './calendarViews.ts'
 import { onMinute } from './minuteTick.ts'
 import { InlineFaces, ChipFace } from './Face'
 
@@ -98,7 +98,15 @@ function useSwipe(onLeft: () => void, onRight: () => void) {
   }
 }
 
-export default function CalendarView() {
+/** The link this place handles its own query on: Home is #/home (or no link at all), Calendar #/calendar/…. */
+const isHere = (home: boolean) => home ? /^#?\/?(home)?(\?|$)/.test(location.hash) : /^#\/calendar(\/|\?|$)/.test(location.hash)
+/** Takes a handled link's query away, so a reload doesn't run it again. */
+const clearQuery = () => history.replaceState(null, '', hashPath(location.hash) || '#/home')
+
+/** Home (`place` home: the Board and Newscast) and Calendar (Day, Week, Month and Schedule): one
+ * screen in two places, mounted apart (App.tsx keys them), so leaving Calendar forgets its day,
+ * Back and Show hidden. */
+export default function CalendarView({ place }: { place: 'home' | 'calendar' }) {
   const dialog = useDialog()
   const { settings, members, categories, selectedMemberId, focusMemberId, focusShowsShared, focusLocked, meMemberId, parentDevice, toast, reloadCore, refreshTick } = useApp()
   const device = useDeviceAppearance()
@@ -106,19 +114,29 @@ export default function CalendarView() {
   // Where the Board puts one or two count tiles as chips (boardFit.ts tileChips); a phone's toolbar has no room.
   const [chipHost, setChipHost] = useState<HTMLElement | null>(null)
   const tz = settings.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-  // Phones default to the agenda view (a 7-day grid is unreadable that narrow); the wall iPad
-  // keeps Week. Only the initial default differs — switching views afterward still works either way.
-  // A device can lock the view (This display → Lock view): the switcher goes and it never changes.
-  const [chosenView, setViewMode] = useState<ViewMode>(() => (MOCK && (sessionStorage.getItem('kinwall.demoView') as ViewMode | null)) || 'board') // the board is the default everywhere; a display can still lock any view
+  const home = place === 'home'
+  // Home opens on the Board. Calendar opens the view its link names (#/calendar/month), else the one
+  // this device used last, else Schedule on a phone (a 7-day grid is unreadable that narrow) and Week
+  // on anything bigger. A device can lock the view (This display → Lock view): the switcher goes and
+  // it never changes.
+  const [chosenView, setViewMode] = useState<ViewMode>(() => {
+    const demo = MOCK ? sessionStorage.getItem('kinwall.demoView') : null
+    return home ? (isHomeView(demo) ? demo : 'board') : linkedCalendarView(location.hash) ?? lastCalendarView(isPhone)
+  })
+  const locked = home ? isHomeView(device.lockView) : isCalendarView(device.lockView)
   // Newscast turned off (Settings → Features): its tab goes, and a screen showing or locked to it shows the Board.
   const newscastOn = settings.features.newscast !== false
-  const viewMode: ViewMode = ((v: ViewMode) => v === 'newscast' && !newscastOn ? 'board' : v)(device.lockView ?? chosenView)
+  const viewMode: ViewMode = ((v: ViewMode) => v === 'newscast' && !newscastOn ? 'board' : v)(locked ? device.lockView! : chosenView)
   // Board and Newscast are for reading: no paging, hidden events or category filter (the Board can add one).
-  const calendarish = viewMode !== 'board' && viewMode !== 'newscast'
-  // Picked in the switcher: a calendar view (Day, Week, Month) is what Calendar opens next time on this device.
+  const calendarish = isCalendarView(viewMode)
+  // Picked in the switcher: a calendar view is what Calendar opens next time on this device.
   const pickView = (v: ViewMode) => { if (isCalendarView(v)) rememberCalendarView(v); setViewMode(v); setDayFrom(null) }
+  // Calendar's view switch fits inline on a phone at most text sizes; at big text (or a 320px
+  // phone) it's the view button and its sheet instead.
+  const viewsInline = !isPhone || window.innerWidth >= 21 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+  const tabsShown = !locked && (home ? newscastOn : viewsInline)
   // A day opened by tapping it in the Week or Month grid: Back (phones) and the Calendar tab return there.
-  const [dayFrom, setDayFrom] = useState<CalendarView | null>(null)
+  const [dayFrom, setDayFrom] = useState<'week' | 'month' | null>(null)
   // The board carries its own big clock, so the header drops its clock while it's showing.
   useEffect(() => { document.documentElement.dataset.view = viewMode; return () => { delete document.documentElement.dataset.view } }, [viewMode])
   const [anchor, setAnchor] = useState(() => new Date())
@@ -157,18 +175,19 @@ export default function CalendarView() {
   const range = useMemo(() => {
     if (viewMode === 'week') return { from: weekDays[0], to: addDays(weekDays[weekDays.length - 1], 1) }
     // anchor is "now" after Today/initial load - start at midnight so today's earlier events show.
-    if (viewMode === 'day') return { from: startOfDay(anchor), to: addDays(startOfDay(anchor), 1) }
+    // Home needs just today (Now / Next, transition warnings): the Board loads its own.
+    if (viewMode === 'day' || home) return { from: startOfDay(anchor), to: addDays(startOfDay(anchor), 1) }
     if (viewMode === 'month') {
       const from = startOfWeek(startOfMonth(anchor), { weekStartsOn: settings.weekStart })
       const to = addDays(startOfWeek(endOfMonth(anchor), { weekStartsOn: settings.weekStart }), 7)
       return { from, to }
     }
     return { from: startOfDay(anchor), to: addDays(startOfDay(anchor), 30) } // schedule: rolling 30-day agenda
-  }, [viewMode, anchor, settings.weekStart, weekDays])
+  }, [viewMode, anchor, settings.weekStart, weekDays, home])
 
   // Show hidden (parents' devices): hidden and filtered-out events too, faded and marked, so they can be shown again.
   const [showHiddenPicked, setShowHidden] = useState(false)
-  const showHidden = parentDevice && showHiddenPicked && viewMode !== 'board'
+  const showHidden = parentDevice && showHiddenPicked && calendarish
   const loadEvents = () => api.getEvents(range.from.toISOString(), range.to.toISOString(), undefined, undefined, showHidden)
   useEffect(() => {
     let canceled = false
@@ -188,25 +207,32 @@ export default function CalendarView() {
     const read = () => {
       const q = new URLSearchParams(location.hash.split('?')[1] || '')
       const id = q.get('event')
-      if (!id) return
+      if (!id || home || !isHere(false)) return
       const at = q.get('at')
       if (at) setAnchor(at.length === 10 ? new Date(at + 'T00:00:00') : new Date(at))
       setViewMode(v => (v === 'month' ? 'schedule' : v))
       setPendingEventId(id)
-      history.replaceState(null, '', '#/calendar')
+      clearQuery()
     }
     read()
     window.addEventListener('hashchange', read)
     return () => window.removeEventListener('hashchange', read)
   }, [])
-  // #/calendar?poll=<id> (the bell's "New poll"): that poll, over whatever Home shows.
+  // #/calendar/<view> while Calendar is open (a link, the demo's ?view=): that view.
+  useEffect(() => {
+    if (home) return
+    const read = () => { const v = linkedCalendarView(location.hash); if (v) { setViewMode(v); setDayFrom(null) } }
+    window.addEventListener('hashchange', read)
+    return () => window.removeEventListener('hashchange', read)
+  }, [home])
+  // #/home?poll=<id> (the bell's "New poll"): that poll, over whatever Home shows.
   const [linkedPoll, setLinkedPoll] = useState<string | null>(null)
   useEffect(() => {
     const read = () => {
       const id = hashQuery(location.hash).get('poll')
-      if (!id || !location.hash.startsWith('#/calendar')) return
+      if (!id || !home || !isHere(true)) return
       setLinkedPoll(id)
-      history.replaceState(null, '', '#/calendar')
+      clearQuery()
     }
     read()
     window.addEventListener('hashchange', read)
@@ -218,10 +244,11 @@ export default function CalendarView() {
   useEffect(() => {
     const read = () => {
       const q = hashQuery(location.hash)
-      const found = location.hash.startsWith('#/calendar') ? eventDraft(q, format(new Date(), 'yyyy-MM-dd')) : null
+      const found = !home && isHere(false) ? eventDraft(q, format(new Date(), 'yyyy-MM-dd')) : null
       if (!found) return
+      if (found.start) setAnchor(new Date(found.start.length === 10 ? found.start + 'T00:00:00' : found.start)) // Calendar on that day
       setDraft({ prefill: found, shared: outingExtras(q) })
-      history.replaceState(null, '', '#/calendar')
+      clearQuery()
     }
     read()
     window.addEventListener('hashchange', read)
@@ -233,15 +260,15 @@ export default function CalendarView() {
     if (parentDevice && canAdd) setEditState({ event: null, ...draft })
     else toast("Open this link on a parent's phone to add the event", true)
   }, [draft, calendarsLoaded, parentDevice, canAdd, toast])
-  // #/calendar?checkin=<member> (the check-in widget): their day, at the check-in. Only for someone this
+  // #/home?checkin=<member> (the check-in widget): their day, at the check-in. Only for someone this
   // device could tap in the header (a display pinned to one person: just them); anyone else, just the calendar.
   const [checkIn, setCheckIn] = useState<string | null>(null)
   useEffect(() => {
     const read = () => {
       const id = hashQuery(location.hash).get('checkin')
-      if (id === null || !location.hash.startsWith('#/calendar')) return
+      if (id === null || !home || !isHere(true)) return
       setCheckIn(id)
-      history.replaceState(null, '', '#/calendar')
+      clearQuery()
     }
     read()
     window.addEventListener('hashchange', read)
@@ -258,10 +285,10 @@ export default function CalendarView() {
   }, [pendingEventId, events])
 
   useEffect(() => {
-    const onIdle = () => { setDetail(null); setEditState(null); setCheckIn(null); setViewMode('board'); setAnchor(new Date()) } // back to the default view
+    const onIdle = () => { setDetail(null); setEditState(null); setCheckIn(null); if (home) setViewMode('board'); setAnchor(new Date()) } // back to the default view
     window.addEventListener(IDLE_RESET_EVENT, onIdle)
     return () => window.removeEventListener(IDLE_RESET_EVENT, onIdle)
-  }, [])
+  }, [home])
 
   // Category filter: [] shows everything; otherwise only the picked categories ('__none' = events
   // with no category). Saved per device, since a wall display may want e.g. work events hidden for
@@ -428,72 +455,98 @@ export default function CalendarView() {
       {showNowNext && <NowNextCard events={todayEvents} tz={tz} placeholder={isPhone} warnMinutes={warnTimes} />}
       {warnTimes.length > 0 && <TransitionWarnings events={todayEvents} minutes={warnTimes} sound={!!device.warningSound} settings={settings} />}
       {parentDevice && <SyncAlert calendars={calendars} />}
-      {(!device.lockView || calendarish || (viewMode === 'board' && categories.length > 0)) && <div className={`calendar-toolbar ${!device.lockView && !isPhone && tabOf(viewMode) === 'calendar' ? 'cal-open' : ''}`}>
-        {!device.lockView && (
-          isPhone ? <ViewPicker value={viewMode} newscast={newscastOn} onChange={pickView} /> : <ViewTabs value={viewMode} origin={dayFrom} newscast={newscastOn} onChange={pickView} />
-        )}
-        <div className="toolbar-nav">
-          {/* The board always shows today onward, and Newscast pages itself: no paging. */}
-          {calendarish && <>
-          <button className="icon-btn" onClick={() => step(-1)} aria-label={`Previous ${viewMode === 'schedule' ? '30 days' : viewMode === 'week' && isPhone ? '3 days' : viewMode}`}><ChevronLeft width={20} height={20} /></button>
-          <button className="today-btn" onClick={() => { setSlideDir(0); setAnchor(new Date()) }}>Today</button>
-          <button className="icon-btn" onClick={() => step(1)} aria-label={`Next ${viewMode === 'schedule' ? '30 days' : viewMode === 'week' && isPhone ? '3 days' : viewMode}`}><ChevronRight width={20} height={20} /></button>
-          <h2 className="period-label" aria-live="polite" ref={periodRef} tabIndex={-1}>{periodLabel}</h2>
-          </>}
+      {home ? (!locked || (viewMode === 'board' && categories.length > 0)) && (
+        // Home: Board | Newscast, the Board's count chips, Polls, Outings and Layout and filter. Locked
+        // to a view, just the category filter (when the family has categories).
+        <div className="calendar-toolbar home-toolbar">
+          {tabsShown && <Segmented tabs idBase="homeview" label="View" className="view-switch" value={viewMode} onChange={pickView}
+            options={HOME_VIEWS.map(v => ({ key: v, label: viewLabel(v, isPhone) }))} />}
+          {viewMode === 'board' && !isPhone && <div className="board-chips" ref={setChipHost} />}
+          <div className="toolbar-end">
+            {viewMode === 'board' && !locked && settings.features.polls !== false && <PollsButton />}
+            {viewMode === 'board' && !locked && settings.features.outings !== false && <OutingsButton />}
+            {viewMode === 'board' && (
+              <button className={`icon-btn filter-btn ${activeCategoryFilter.length ? 'active' : ''}`} onClick={() => setFilterOpen(true)} aria-haspopup="dialog"
+                aria-label={locked ? (activeCategoryFilter.length ? `Filter: ${activeCategoryFilter.length} categories` : 'Filter by category')
+                  : activeCategoryFilter.length ? `Layout and filter: ${activeCategoryFilter.length} categories` : 'Layout and filter'}>
+                {locked ? <FilterIcon width={20} height={20} /> : <SlidersIcon width={20} height={20} />}
+                {activeCategoryFilter.length > 0 && <span className="filter-badge" aria-hidden="true">{activeCategoryFilter.length}</span>}
+              </button>
+            )}
+          </div>
         </div>
-        {viewMode === 'board' && !isPhone && <div className="board-chips" ref={setChipHost} />}
-        {/* Show hidden and the filter sit together at the end, same size and gap. */}
-        <div className="toolbar-end">
-          {/* The Board's layout, off to the side like the filter; not on a screen whose view is locked. */}
-          {viewMode === 'board' && !device.lockView && <BoardLayoutPicker />}
-          {viewMode === 'board' && !device.lockView && settings.features.polls !== false && <PollsButton />}
-          {viewMode === 'board' && !device.lockView && settings.features.outings !== false && <OutingsButton />}
-          {isPhone && viewMode === 'day' && dayFrom && !device.lockView && (
-            <button type="button" className="btn btn-secondary day-back" aria-label={`Back to ${viewLabel(dayFrom, true)}`} onClick={() => { setViewMode(dayFrom); setDayFrom(null) }}>
-              <ChevronLeft width={18} height={18} />{viewLabel(dayFrom, true)}
-            </button>
-          )}
-          {parentDevice && calendarish && (
-            <button className={`icon-btn hidden-toggle ${showHidden ? 'active' : ''}`} onClick={() => setShowHidden(v => !v)} aria-pressed={showHidden}
-              aria-label="Show hidden events" title="Show hidden events">
-              {showHidden ? <EyeIcon width={20} height={20} /> : <EyeOffIcon width={20} height={20} />}
-            </button>
-          )}
-          {categories.length > 0 && viewMode !== 'newscast' && (
-            <button className={`icon-btn filter-btn ${activeCategoryFilter.length ? 'active' : ''}`} onClick={() => setFilterOpen(true)}
-              aria-label={activeCategoryFilter.length ? `Filter: ${activeCategoryFilter.length} categories` : 'Filter by category'}>
-              <FilterIcon width={20} height={20} />
-              {activeCategoryFilter.length > 0 && <span className="filter-badge">{activeCategoryFilter.length}</span>}
-            </button>
-          )}
+      ) : (
+        // Calendar: Day | Week | Month | Schedule, paging and the period, then Show hidden and the filter.
+        <div className={`calendar-toolbar cal-toolbar ${locked ? 'locked' : tabsShown ? '' : 'no-switch'}`}>
+          {!locked && (tabsShown
+            ? <Segmented tabs idBase="calview" label="Calendar view" className="view-switch" value={viewMode} onChange={pickView}
+                options={CALENDAR_VIEWS.map(v => ({ key: v, label: viewLabel(v, isPhone) }))} />
+            : <ViewPicker value={viewMode as CalendarView} onChange={pickView} />)}
+          <div className="toolbar-nav">
+            <button className="icon-btn" onClick={() => step(-1)} aria-label={`Previous ${viewMode === 'schedule' ? '30 days' : viewMode === 'week' && isPhone ? '3 days' : viewMode}`}><ChevronLeft width={20} height={20} /></button>
+            <button className="today-btn" onClick={() => { setSlideDir(0); setAnchor(new Date()) }}>Today</button>
+            <button className="icon-btn" onClick={() => step(1)} aria-label={`Next ${viewMode === 'schedule' ? '30 days' : viewMode === 'week' && isPhone ? '3 days' : viewMode}`}><ChevronRight width={20} height={20} /></button>
+            <h2 className="period-label" aria-live="polite" ref={periodRef} tabIndex={-1}>{periodLabel}</h2>
+          </div>
+          {/* Show hidden and the filter sit together at the end, same size and gap. */}
+          <div className="toolbar-end">
+            {/* A day opened from Month on a phone: Back to it. With the switch inline, its Month is that one tap already. */}
+            {isPhone && viewMode === 'day' && dayFrom && !locked && !tabsShown && (
+              <button type="button" className="btn btn-secondary day-back" aria-label={`Back to ${viewLabel(dayFrom, true)}`} onClick={() => { setViewMode(dayFrom); setDayFrom(null) }}>
+                <ChevronLeft width={18} height={18} />{viewLabel(dayFrom, true)}
+              </button>
+            )}
+            {parentDevice && (
+              <button className={`icon-btn hidden-toggle ${showHidden ? 'active' : ''}`} onClick={() => setShowHidden(v => !v)} aria-pressed={showHidden}
+                aria-label="Show hidden events" title="Show hidden events">
+                {showHidden ? <EyeIcon width={20} height={20} /> : <EyeOffIcon width={20} height={20} />}
+              </button>
+            )}
+            {categories.length > 0 && (
+              <button className={`icon-btn filter-btn ${activeCategoryFilter.length ? 'active' : ''}`} onClick={() => setFilterOpen(true)} aria-haspopup="dialog"
+                aria-label={activeCategoryFilter.length ? `Filter: ${activeCategoryFilter.length} categories` : 'Filter by category'}>
+                <FilterIcon width={20} height={20} />
+                {activeCategoryFilter.length > 0 && <span className="filter-badge" aria-hidden="true">{activeCategoryFilter.length}</span>}
+              </button>
+            )}
+          </div>
         </div>
-      </div>}
+      )}
 
       {filterOpen && (
-        <Sheet title="Show categories" onClose={() => setFilterOpen(false)}
+        // Home's is Layout and filter: this screen's Board layout, then the categories. Calendar's
+        // (and a locked Home's) is the categories alone. One category filter per device, for both.
+        <Sheet title={home && !locked ? 'Layout and filter' : 'Show categories'} onClose={() => setFilterOpen(false)}
           actions={<>
-            <button className="btn btn-secondary" onClick={() => setCategoryFilter([])} disabled={activeCategoryFilter.length === 0}>Show all</button>
+            {categories.length > 0 && <button className="btn btn-secondary" onClick={() => setCategoryFilter([])} disabled={activeCategoryFilter.length === 0}>Show all</button>}
             <button className="btn btn-primary" onClick={() => setFilterOpen(false)}>Done</button>
           </>}>
-          <p className="settings-row-sub" style={{ margin: '0 0 12px' }}>Pick one or more. With none picked, every event shows.</p>
-          <div className="chip-row" role="group" aria-label="Categories">
-            {[...categories.map(c => ({ id: c.id, label: `${c.emoji ? c.emoji + ' ' : ''}${c.name}`, color: c.color })), { id: NO_CATEGORY, label: 'No category', color: undefined }].map(c => {
-              const on = activeCategoryFilter.includes(c.id)
-              return (
-                <button key={c.id} className={`chip ${on ? 'active' : ''}`} aria-pressed={on} style={c.color ? { ['--chip-color' as string]: c.color } : undefined}
-                  onClick={() => setCategoryFilter(on ? activeCategoryFilter.filter(x => x !== c.id) : [...activeCategoryFilter, c.id])}>
-                  {c.label}
-                </button>
-              )
-            })}
-          </div>
+          {home && !locked && <>
+            <h3 className="scheme-group-title">Layout on this screen</h3>
+            <LayoutChips onLeave={() => setFilterOpen(false)} />
+          </>}
+          {categories.length > 0 && <>
+            {home && !locked && <h3 className="scheme-group-title sheet-group-gap">Categories</h3>}
+            <p className="settings-row-sub" style={{ margin: '0 0 12px' }}>Pick one or more. With none picked, every event shows.</p>
+            <div className="chip-row" role="group" aria-label="Categories">
+              {[...categories.map(c => ({ id: c.id, label: `${c.emoji ? c.emoji + ' ' : ''}${c.name}`, color: c.color })), { id: NO_CATEGORY, label: 'No category', color: undefined }].map(c => {
+                const on = activeCategoryFilter.includes(c.id)
+                return (
+                  <button key={c.id} className={`chip ${on ? 'active' : ''}`} aria-pressed={on} style={c.color ? { ['--chip-color' as string]: c.color } : undefined}
+                    onClick={() => setCategoryFilter(on ? activeCategoryFilter.filter(x => x !== c.id) : [...activeCategoryFilter, c.id])}>
+                    {c.label}
+                  </button>
+                )
+              })}
+            </div>
+          </>}
         </Sheet>
       )}
 
       {calendarish && goalLine && <p className="cal-goal"><span className="sr-only">{goalLine.name}'s goal: </span><span aria-hidden="true">🎯</span> {goalLine.goal}</p>}
 
-      <div className="swipe-area" {...(calendarish ? swipe : {})} role={device.lockView || isPhone ? 'region' : 'tabpanel'}
-        aria-labelledby={device.lockView || isPhone ? undefined : `calview-${tabOf(viewMode)}`} aria-label={device.lockView || isPhone ? `${viewLabel(viewMode, isPhone)} view` : undefined}>
+      <div className="swipe-area" {...(calendarish ? swipe : {})} role={tabsShown ? 'tabpanel' : 'region'}
+        aria-labelledby={tabsShown ? `${home ? 'homeview' : 'calview'}-${viewMode}` : undefined} aria-label={tabsShown ? undefined : `${viewLabel(viewMode, isPhone)} view`}>
         {/* Keyed by view + period so each change re-mounts and plays the slide/fade in. */}
         <div key={calendarish ? `${viewMode}:${dateKey(range.from)}` : viewMode} className={`view-anim ${slideDir === 1 ? 'from-right' : slideDir === -1 ? 'from-left' : ''}`}>
         {viewMode === 'board' ? (
@@ -511,7 +564,7 @@ export default function CalendarView() {
           <WeekView days={[startOfDay(anchor)]} events={visibleEvents} tz={tz} members={members} categories={categories} onTap={setDetail} onDayTap={openDay}
             onSlotTap={p => openAdd(selectedMemberId ? { ...p, memberIds: [selectedMemberId] } : p)} />
         ) : viewMode === 'month' ? (
-          <MonthView anchor={anchor} events={visibleEvents} tz={tz} weekStart={settings.weekStart} members={members} categories={categories} onTap={setDetail} onDayTap={openDay} dayOnly={isPhone && !device.lockView} />
+          <MonthView anchor={anchor} events={visibleEvents} tz={tz} weekStart={settings.weekStart} members={members} categories={categories} onTap={setDetail} onDayTap={openDay} dayOnly={isPhone && !locked} />
         ) : (
           <ScheduleView anchor={anchor} events={visibleEvents} tz={tz} members={members} categories={categories} onTap={setDetail} />
         )}
@@ -1466,56 +1519,29 @@ function EventEditSheet({ event, prefill, shared, calendars, offerNewLocal, memb
   )
 }
 
-const VIEW_ICONS: Record<ViewMode, typeof CalendarIcon> = { board: BoardViewIcon, day: DayViewIcon, week: ThreeDayViewIcon, month: CalendarIcon, schedule: ListIcon, newscast: NewscastIcon }
+const VIEW_ICONS: Record<CalendarView, typeof CalendarIcon> = { day: DayViewIcon, week: ThreeDayViewIcon, month: CalendarIcon, schedule: ListIcon }
 
-/** Tablets and up: Board | Calendar | Schedule | Newscast in one pill, and Calendar opens out into
- * Day | Week | Month right beside it. The tab list is display: contents, so the calendar views
- * (their own radio group, after the tabs in Tab order) can sit between Calendar and Schedule on screen. */
-function ViewTabs({ value, origin, newscast, onChange }: { value: ViewMode; origin: CalendarView | null; newscast: boolean; onChange: (v: ViewMode) => void }) {
-  const tab = tabOf(value)
-  return (
-    <div className={`segmented view-tabs ${tab === 'calendar' ? 'open' : ''}`}>
-      <Segmented tabs idBase="calview" label="View" className="view-tablist" value={tab}
-        onChange={t => onChange(viewForTab(t, value, lastCalendarView(), origin))}
-        options={viewTabs(newscast).map(t => ({ key: t, label: t === 'calendar' ? 'Calendar' : viewLabel(t, false) }))} />
-      {tab === 'calendar' && (
-        <Segmented label="Calendar view" className="view-sub" value={value as CalendarView} onChange={onChange}
-          options={CALENDAR_VIEWS.map(v => ({ key: v, label: viewLabel(v, false), ariaLabel: `Calendar view: ${viewLabel(v, false)}` }))} />
-      )}
-    </div>
-  )
-}
-
-/** Phones: the view tabs don't fit, so one button shows the view and opens a sheet of them: Board,
- * Calendar with Day, 3 Day and Month in it, Schedule and Newscast. One tap picks any of them. */
-function ViewPicker({ value, newscast, onChange }: { value: ViewMode; newscast: boolean; onChange: (v: ViewMode) => void }) {
+/** A phone at big text (or a 320px phone), where Calendar's view switch doesn't fit inline: one
+ * button shows the view and opens a sheet of Day, 3 Day, Month and Schedule. */
+function ViewPicker({ value, onChange }: { value: CalendarView; onChange: (v: CalendarView) => void }) {
   const [open, setOpen] = useState(false)
   const Icon = VIEW_ICONS[value]
-  const pick = (v: ViewMode) => { onChange(v); setOpen(false) }
-  const row = (v: 'board' | 'schedule' | 'newscast') => {
-    const VIcon = VIEW_ICONS[v]
-    return (
-      <button type="button" className="sheet-link" aria-pressed={v === value} onClick={() => pick(v)}>
-        <VIcon /><span>{viewLabel(v, true)}<small>{viewHint(v, true)}</small></span>{v === value && <CheckIcon className="pick-check" />}
-      </button>
-    )
-  }
   return (
     <>
-      <button type="button" className="btn btn-secondary view-pick" aria-haspopup="dialog" aria-label={`View: ${isCalendarView(value) ? 'Calendar, ' : ''}${viewLabel(value, true)}`} onClick={() => setOpen(true)}>
+      <button type="button" className="btn btn-secondary view-pick" aria-haspopup="dialog" aria-label={`Calendar view: ${viewLabel(value, true)}`} onClick={() => setOpen(true)}>
         <Icon width={18} height={18} /><span>{viewLabel(value, true)}</span><ChevronDown width={16} height={16} />
       </button>
       {open && (
-        <Sheet title="View" onClose={() => setOpen(false)}>
+        <Sheet title="Calendar view" onClose={() => setOpen(false)}>
           <div className="sheet-links">
-            {row('board')}
-            <div className={`view-cal-group ${isCalendarView(value) ? 'on' : ''}`}>
-              <div className="view-cal-head"><CalendarIcon /><span>Calendar<small>One day, 3 days or the month</small></span></div>
-              <Segmented label="Calendar view" className="view-cal-seg" value={isCalendarView(value) ? value : null} onChange={pick}
-                options={CALENDAR_VIEWS.map(v => ({ key: v, label: viewLabel(v, true), ariaLabel: `Calendar view: ${viewLabel(v, true)}` }))} />
-            </div>
-            {row('schedule')}
-            {newscast && row('newscast')}
+            {CALENDAR_VIEWS.map(v => {
+              const VIcon = VIEW_ICONS[v]
+              return (
+                <button key={v} type="button" className="sheet-link" aria-pressed={v === value} onClick={() => { onChange(v); setOpen(false) }}>
+                  <VIcon /><span>{viewLabel(v, true)}<small>{viewHint(v, true)}</small></span>{v === value && <CheckIcon className="pick-check" />}
+                </button>
+              )
+            })}
           </div>
         </Sheet>
       )}

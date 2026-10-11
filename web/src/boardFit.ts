@@ -128,7 +128,7 @@ export const tileChips = (tiles: string[], toolbar: boolean) =>
 
 /** How the toolbar chips fit their spot (`room`, px, with the buttons' words showing): with their whole
  *  names (`full`: each chip's width) when all fit, else each just its icon and count (`short`; never
- *  "G… 14"), else 'tight': short chips, and the toolbar's Family wall and Polls buttons down to their
+ *  "G… 14"), else 'tight': short chips, and the toolbar's Polls and Outings buttons down to their
  *  icons, which frees `freed` px, else 'wrap': the chips on a row of their own (a portrait tablet).
  *  `was` is the current fit: measured while tight the spot is `freed` wider, and it takes a few px to
  *  spare to step back, so it can't flip back and forth at an edge. */

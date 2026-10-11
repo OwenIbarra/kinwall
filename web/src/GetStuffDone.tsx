@@ -49,7 +49,7 @@ export default function GetStuffDone({ listId, chore, pinned, onClose }: { listI
       document.removeEventListener('keydown', onKey); opener?.focus?.({ preventScroll: true })
     }
   }, [opener, listId])
-  const exit = () => { if (pinned) location.hash = '#/calendar'; onClose() } // pinned: back to the Board
+  const exit = () => { if (pinned) location.hash = '#/home'; onClose() } // pinned: back to the Board
   const close = useRef(exit)
   close.current = exit
   useEffect(() => { if (detail) heading.current?.focus({ preventScroll: true }) }, [!!detail]) // eslint-disable-line react-hooks/exhaustive-deps

@@ -1,19 +1,17 @@
-// Home's views, in switcher order, with the names and hints the view tabs and the phone's view
-// sheet show. The switcher has four tabs, Board | Calendar | Schedule | Newscast; Calendar holds
-// Day, Week (3 Day on a phone) and Month, and remembers which of them this device used last.
-// Newscast goes when the family turns it off (Settings → Features).
+// Home and Calendar's views, with the names and hints their switchers and the phone's view sheet
+// show. Home (#/home) is Board | Newscast (Newscast goes when the family turns it off, Settings →
+// Features). Calendar (#/calendar/<view>) is Day | Week (3 Day on a phone) | Month | Schedule, and
+// remembers which of them this device used last.
 
 import { format } from 'date-fns'
 
-export type ViewMode = 'week' | 'day' | 'month' | 'schedule' | 'board' | 'newscast'
-export type ViewTab = 'board' | 'calendar' | 'schedule' | 'newscast'
-export type CalendarView = 'day' | 'week' | 'month'
+export type HomeView = 'board' | 'newscast'
+export type CalendarView = 'day' | 'week' | 'month' | 'schedule'
+export type ViewMode = HomeView | CalendarView
 
-export const VIEW_MODES: readonly ViewMode[] = ['board', 'day', 'week', 'month', 'schedule', 'newscast']
-export const VIEW_TABS: readonly ViewTab[] = ['board', 'calendar', 'schedule', 'newscast']
-/** The tabs this family has: Newscast only while it's on. */
-export const viewTabs = (newscast: boolean) => newscast ? VIEW_TABS : VIEW_TABS.filter(t => t !== 'newscast')
-export const CALENDAR_VIEWS: readonly CalendarView[] = ['day', 'week', 'month']
+export const HOME_VIEWS: readonly HomeView[] = ['board', 'newscast']
+export const CALENDAR_VIEWS: readonly CalendarView[] = ['day', 'week', 'month', 'schedule']
+export const VIEW_MODES: readonly ViewMode[] = [...HOME_VIEWS, ...CALENDAR_VIEWS]
 
 /** A phone's Week view shows 3 days, so it says so. */
 export const viewLabel = (v: ViewMode, isPhone: boolean) => v === 'week' ? (isPhone ? '3 Day' : 'Week') : v[0].toUpperCase() + v.slice(1)
@@ -30,18 +28,10 @@ const HINTS: Record<ViewMode, string> = {
 export const viewHint = (v: ViewMode, isPhone: boolean) => v === 'week' && isPhone ? '3 days side by side, hour by hour' : HINTS[v]
 
 export const isCalendarView = (v: unknown): v is CalendarView => CALENDAR_VIEWS.includes(v as CalendarView)
-
-/** The tab a view sits under: Day, Week and Month are all Calendar. */
-export const tabOf = (v: ViewMode): ViewTab => isCalendarView(v) ? 'calendar' : v
-
-/** The view a tab opens: Calendar opens the last calendar view used, and tapping it again while
- * one is showing keeps that one, except a day opened from the Week or Month grid (`origin`), which
- * goes back to that grid. */
-export const viewForTab = (tab: ViewTab, current: ViewMode, last: CalendarView, origin: CalendarView | null = null): ViewMode =>
-  tab !== 'calendar' ? tab : current === 'day' && origin ? origin : isCalendarView(current) ? current : last
+export const isHomeView = (v: unknown): v is HomeView => HOME_VIEWS.includes(v as HomeView)
 
 /** Where a day opened by tapping it in a grid goes back to: Week or Month, else nowhere. */
-export const dayOrigin = (from: ViewMode): CalendarView | null => from === 'week' || from === 'month' ? from : null
+export const dayOrigin = (from: ViewMode): 'week' | 'month' | null => from === 'week' || from === 'month' ? from : null
 
 /** A Month day's accessible name: "Thursday, October 1: 4 events". */
 export const monthDayLabel = (d: Date, count: number) =>
@@ -49,11 +39,35 @@ export const monthDayLabel = (d: Date, count: number) =>
 
 const LAST_KEY = 'kinwall.calendarView'
 
-/** The calendar view this device used last (Week when none, or storage is blocked). */
-export function lastCalendarView(): CalendarView {
-  try { const v = localStorage.getItem(LAST_KEY); return isCalendarView(v) ? v : 'week' } catch { return 'week' }
+/** The calendar view this device used last; before it has one (or with storage blocked), Schedule
+ * on a phone and Week anywhere bigger. */
+export function lastCalendarView(isPhone = false): CalendarView {
+  const first = isPhone ? 'schedule' : 'week'
+  try { const v = localStorage.getItem(LAST_KEY); return isCalendarView(v) ? v : first } catch { return first }
 }
 
 export function rememberCalendarView(v: CalendarView) {
-  try { localStorage.setItem(LAST_KEY, v) } catch { /* storage blocked: Calendar opens Week */ }
+  try { localStorage.setItem(LAST_KEY, v) } catch { /* storage blocked: Calendar opens its first view */ }
+}
+
+/** The view a Calendar link names (#/calendar/month), or null. */
+export const linkedCalendarView = (hash: string): CalendarView | null => {
+  const v = hash.split('?')[0].split('/')[2]
+  return isCalendarView(v) ? v : null
+}
+
+/** Where a screen rests (idle reset, the Night screen, a link to a feature that's off): Home, or
+ * Calendar on a display locked to one of its views (Calendar takes Home's spot there). */
+export const restingHash = (lock: ViewMode | undefined) => isCalendarView(lock) ? '#/calendar' : '#/home'
+
+/** A display with Lock view can't be bumped into another view: locked to Board or Newscast it has
+ * no Calendar, and locked to a calendar view Calendar takes Home's place. */
+export const lockedOut = (key: string, lock: ViewMode | undefined) =>
+  isHomeView(lock) ? key === 'calendar' : isCalendarView(lock) ? key === 'home' : false
+
+/** Where "Me" goes in the nav (an index into `keys`): after Chores on a kid's device, so it stays on
+ * the phone's bottom bar; after Lists on a grown-up's own phone, where it heads the More list. */
+export const meSlot = (keys: string[], kid: boolean) => {
+  const after = kid ? keys.indexOf('chores') : Math.max(keys.indexOf('lists'), keys.indexOf('chores'))
+  return after < 0 ? 1 : after + 1
 }

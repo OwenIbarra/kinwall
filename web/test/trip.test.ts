@@ -122,7 +122,8 @@ test('shopping mode resumes only while its trip is on, and only over the default
     setTripStore('l1', 'Market')
     assert.equal(shoppingModeList(), 'l1')
     assert.equal(resumeShoppingHash(''), '#/lists/l1/shop')
-    assert.equal(resumeShoppingHash('#/calendar'), '#/lists/l1/shop')
+    assert.equal(resumeShoppingHash('#/home'), '#/lists/l1/shop')
+    assert.equal(resumeShoppingHash('#/calendar'), null) // Calendar is a place of its own now
     assert.equal(resumeShoppingHash('#/chores'), null) // a link somewhere else wins
     setTripStore('l1', null) // Checkout / End
     assert.equal(resumeShoppingHash(''), null)

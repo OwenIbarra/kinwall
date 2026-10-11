@@ -9,16 +9,12 @@ export const hashQuery = (hash: string) => new URLSearchParams(hash.split('?')[1
 /** The link without its query. Put back with history.replaceState once handled, so a reload doesn't run it again. */
 export const hashPath = (hash: string) => hash.split('?')[0]
 
-/** #/home is the Home screen's own name; underneath it's still #/calendar, which old links (pushes,
- * widgets, Home Assistant) use. Returns the #/calendar link to swap in, or null for any other link. */
-export const homeAlias = (hash: string) => /^#\/home(?=$|\?)/.test(hash) ? '#/calendar' + hash.slice(6) : null
-
 /** `hash` with `key` set to `value` (null takes it out), keeping the path and the rest of the query. */
 export const withHashParam = (hash: string, key: string, value: string | null) => {
   const q = hashQuery(hash)
   if (value === null) q.delete(key); else q.set(key, value)
   const s = q.toString()
-  return (hashPath(hash) || '#/calendar') + (s ? `?${s}` : '')
+  return (hashPath(hash) || '#/home') + (s ? `?${s}` : '')
 }
 
 /** An open full-screen mode (Get stuff done, cooking) kept in the link, so a reload or the app

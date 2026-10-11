@@ -374,25 +374,8 @@ button.nav-rail-btn { font-family: inherit; border: 0; cursor: pointer; } /* Mor
   box-shadow: var(--shadow);
 }
 
-/* Home's view tabs: Board | Calendar | Schedule | Newscast in one pill. Selected, Calendar opens out
-   into one bubble with Day | Week | Month beside it; the picked view is a tinted pill in bolder
-   text (weight, not just color). The tab list is display: contents so its tabs and the calendar
-   views share the pill (Calendar.tsx). */
-.segmented.view-tablist { display: contents; }
-.view-tablist > button:nth-child(n + 3) { order: 2; } /* Schedule and Newscast: after Calendar's own views */
-.segmented.view-sub { order: 1; margin-left: -2px; padding: 0 4px 0 0; gap: 2px; background: var(--card); box-shadow: var(--shadow); border-radius: 0 999px 999px 0; }
-.view-tabs.open .view-tablist > button.active { border-radius: 999px 0 0 999px; padding-right: calc(var(--pad) * 0.45); }
-.segmented.view-sub button { position: relative; padding-inline: calc(var(--pad) * 0.85); min-width: 4.5em; }
-.segmented.view-sub button.active, .segmented.view-cal-seg button.active { background: color-mix(in srgb, var(--accent) 16%, var(--card)); color: var(--accent-text); font-weight: 900; box-shadow: none; }
-/* The phone's view sheet: Calendar is one row holding its three views. */
-.view-cal-group { display: flex; flex-direction: column; gap: 10px; padding: 10px 14px 12px; border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-alt); }
-.view-cal-group.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--bg-alt)); }
-.view-cal-head { display: flex; align-items: center; gap: 12px; font-weight: 800; }
-.view-cal-head svg { width: 20px; height: 20px; flex-shrink: 0; }
-.view-cal-head > span { display: flex; flex-direction: column; }
-.view-cal-head small { color: var(--text-dim); font-weight: 600; font-size: 0.8125rem; }
-.segmented.view-cal-seg { width: 100%; }
-.segmented.view-cal-seg button { flex: 1; min-height: 44px; }
+/* Home's Board | Newscast and Calendar's Day | Week | Month | Schedule: one flat pill each (Calendar.tsx .view-switch). */
+.calendar-toolbar .view-switch button { white-space: nowrap; }
 
 /* View tabs at the start; paging and the period (or the Board's layout) at the end, beside Show
    hidden and the filter. Nothing sits in the middle. */
@@ -409,20 +392,13 @@ button.nav-rail-btn { font-family: inherit; border: 0; cursor: pointer; } /* Mor
 .toolbar-nav .period-label { white-space: nowrap; line-height: 1.2; order: -1; } /* before the paging buttons, so its changing width never moves them */
 .toolbar-end { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 8px; }
 .toolbar-end:empty { display: none; }
-/* Portrait tablets: not room for all three in one row, so paging and the period get the second row, at the end. */
-@media (min-width: 601px) and (max-width: 960px) {
+/* Portrait tablets: not room for all three in one row, so paging and the period get the second row,
+   at the end. A phone on its side keeps one row: its smaller controls fit, and height is what it's short of. */
+@media (min-width: 601px) and (max-width: 960px) and (min-height: 501px) {
   .calendar-toolbar { grid-template-columns: 1fr auto; }
   .toolbar-end { grid-column: 2; grid-row: 1; }
   .toolbar-nav { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
   .toolbar-nav:empty { display: none; }
-}
-/* Landscape tablets: with Calendar open the view tabs are wider, so paging and the period take the
-   second row there too. Beside the side rail, the Day view's "Wednesday, September 30" needs a
-   1280px-wide screen to fit in one row (an iPad Air's 1180 or a 10" tablet's 1152 at Auto scale don't). */
-@media (min-width: 961px) and (max-width: 1279px) {
-  .calendar-toolbar.cal-open { grid-template-columns: 1fr auto; }
-  .cal-open .toolbar-end { grid-column: 2; grid-row: 1; }
-  .cal-open .toolbar-nav { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
 }
 .icon-btn {
   flex-shrink: 0; /* a round button in a tight row stays round */
@@ -1801,18 +1777,25 @@ button.month-cell .month-daynum { flex: none; }
   .calendar-toolbar { padding: 6px 14px 4px; gap: 6px; }
   .toolbar-nav { gap: 4px; flex-wrap: nowrap; min-width: 0; width: 100%; }
   .toolbar-nav .period-label { flex: 1; order: 0; } /* phones: after the buttons, filling the row, so they stay put at the start */
-  /* One row: the view button (the tabs don't fit), the Board's layout next to it, then Show
-     hidden and the filter at the end. Day navigation gets the second row to itself; the Board has
-     no paging, so no second row. */
+  /* Home: Board | Newscast, then Polls, Outings and Layout and filter at the end, in one row.
+     Calendar: its view switch across the first row, paging and the period on the second with Show
+     hidden and the filter at its end. At big text (no room for the switch, .no-switch) the view
+     button takes the switch's place in the first row, beside Back, Show hidden and the filter. */
   .calendar-toolbar { grid-template-columns: auto minmax(0, 1fr) auto auto; }
-  .calendar-toolbar .view-pick { grid-column: 1; grid-row: 1; }
   .toolbar-end { display: contents; }
-  .calendar-toolbar .board-layout-pick { grid-column: 2; grid-row: 1; justify-self: start; max-width: 100%; min-width: 0; }
-  .calendar-toolbar .day-back { grid-column: 2; grid-row: 1; justify-self: start; flex: none; min-height: 44px; padding: 8px 14px 8px 8px; gap: 2px; }
-  .calendar-toolbar .hidden-toggle { grid-column: 3; grid-row: 1; }
   .calendar-toolbar .filter-btn { grid-column: 4; grid-row: 1; }
-  .calendar-toolbar .toolbar-nav { grid-column: 1 / -1; grid-row: 2; }
-  .toolbar-nav:empty { display: none; }
+  .cal-toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .cal-toolbar > .view-switch { grid-column: 1 / -1; grid-row: 1; width: 100%; }
+  .cal-toolbar > .view-switch button { flex: 1 1 auto; padding-inline: 6px; }
+  .cal-toolbar .toolbar-nav { grid-column: 1; grid-row: 2; }
+  .cal-toolbar .hidden-toggle { grid-column: 2; grid-row: 2; }
+  .cal-toolbar .filter-btn { grid-column: 3; grid-row: 2; }
+  .cal-toolbar.no-switch { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .cal-toolbar.no-switch .view-pick { grid-column: 1; grid-row: 1; }
+  .cal-toolbar.no-switch .day-back { grid-column: 2; grid-row: 1; justify-self: start; flex: none; min-height: 44px; padding: 8px 14px 8px 8px; gap: 2px; }
+  .cal-toolbar.no-switch .hidden-toggle { grid-column: 3; grid-row: 1; }
+  .cal-toolbar.no-switch .filter-btn { grid-column: 4; grid-row: 1; }
+  .cal-toolbar.no-switch .toolbar-nav { grid-column: 1 / -1; grid-row: 2; }
   .icon-btn { width: 44px; height: 44px; } /* smaller than wall, but never below a 44px hit area */
   .calendar-toolbar .icon-btn { width: 40px; height: 40px; }
   .today-btn { padding: 7px 10px; font-size: 0.8125rem; min-height: 36px; }
@@ -2763,8 +2746,11 @@ button.board-empty-tap { display: block; width: 100%; text-align: left; backgrou
 /* Board layout editor (BoardEditor.tsx): the columns side by side on a wide screen, each card as tall as its share. */
 /* The Board's layout picker in the calendar toolbar: sized to its choice, not the row. */
 a.btn { text-decoration: none; } /* a link that looks like a button (the Board's Manage layouts) */
-.board-layout-pick.btn { flex: none; gap: 8px; min-height: 44px; padding: 6px 16px; max-width: 16rem; }
-.board-layout-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Home's Layout and filter sheet: the layout chips, the picked one's line, and its links. */
+.layout-detail { margin: 8px 0 10px; }
+.layout-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.layout-links .btn { flex: none; }
+.sheet-group-gap { margin-top: 20px; }
 /* Phones: the calendar view, switched in a sheet (Calendar.tsx ViewPicker). */
 .view-pick.btn { flex: none; gap: 6px; min-height: 44px; padding: 6px 12px; }
 .view-pick > svg:last-child { color: var(--text-dim); }
@@ -3318,7 +3304,7 @@ button.tab-btn { font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: 
   /* Calendar: a tighter toolbar, and month rows keep a readable height and scroll instead of squashing. */
   .calendar-toolbar { padding: 4px var(--pad); gap: 6px; }
   .calendar-toolbar .segmented { padding: 3px; }
-  .calendar-toolbar > .segmented { min-width: 0; max-width: 100%; overflow-x: auto; } /* at large text the views scroll sideways rather than push paging off screen */
+  .calendar-toolbar > .segmented { min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; } /* at large text the views scroll sideways rather than push paging off screen (hidden: the 44px tap areas would scroll it up and down) */
   .calendar-toolbar .segmented button { padding: 6px 10px; font-size: 0.8125rem; min-height: 38px; }
   .calendar-toolbar .icon-btn { width: 40px; height: 40px; }
   .today-btn { padding: 7px 12px; font-size: 0.8125rem; min-height: 38px; }
@@ -3709,54 +3695,54 @@ button.tab-btn { font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: 
 .board-chip-count { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
 .board-chip-short.btn { gap: 3px; }
 .board-chip-short .board-chip-name { max-width: 0; }
-/* Not even icon and count fit (a phone on its side at a large text size): Family wall and Polls show
+/* Not even icon and count fit (a phone on its side at a large text size): Polls and Outings show
    just their icons too, their words kept (at no width) so Board.tsx can tell when they fit again. */
-.calendar-toolbar[data-chips="tight"] :is(.board-layout-pick, .polls-btn).btn { gap: 0; }
-.calendar-toolbar[data-chips="tight"] :is(.board-layout-pick > span, .polls-btn-label) { max-width: 0; overflow: hidden; white-space: nowrap; }
+.calendar-toolbar[data-chips="tight"] .polls-btn.btn { gap: 0; }
+.calendar-toolbar[data-chips="tight"] .polls-btn-label { max-width: 0; overflow: hidden; white-space: nowrap; }
 .calendar-toolbar[data-chips="wrap"] .board-chips { grid-column: 1 / -1; grid-row: 2; }
 @media (max-width: 600px) { .calendar-toolbar .polls-btn.btn { grid-column: 3; grid-row: 1; padding: 6px 10px; } .polls-btn-label { display: none; } } /* a phone's toolbar is full: the 🗳 alone */
-/* A portrait tablet's toolbar holds the view tabs, Family wall, Polls, Outings and the filter only with
-   Polls and Outings as their icons (their names stay as aria-labels). */
-@media (min-width: 601px) and (max-width: 960px) and (orientation: portrait) { .calendar-toolbar:has(.outings-btn) .polls-btn-label { display: none; } .calendar-toolbar:has(.outings-btn) .polls-btn.btn { padding: 6px 12px; } }
-/* The narrowest of those (a foldable's inner screen, about 600-720px wide): Family wall shows its icon
-   too, and the view tabs tighten, or the filter fell off the end of the row. */
+/* The narrowest portrait tablets (a foldable's inner screen, about 600-720px wide): Polls and Outings
+   show their icons (their names stay as aria-labels), and the view switch tightens. */
 @media (min-width: 601px) and (max-width: 719px) and (orientation: portrait) {
   .calendar-toolbar .polls-btn-label { display: none; }
   .calendar-toolbar .polls-btn.btn { padding: 6px 12px; }
-  .calendar-toolbar .board-layout-pick.btn { gap: 0; padding-inline: 12px; }
-  .calendar-toolbar .board-layout-pick > span { max-width: 0; }
   .calendar-toolbar .segmented button { padding-inline: 10px; }
-  /* With Calendar open, the tabs take the first row to themselves; Show hidden and the filter go to
-     the start of the second, beside paging. */
-  .calendar-toolbar.cal-open .segmented { grid-column: 1 / -1; }
-  .cal-open .toolbar-end { grid-column: 1; grid-row: 2; justify-self: start; }
-  .cal-open .toolbar-nav { grid-column: 2; grid-row: 2; }
 }
 /* The Outings button (🎟) shares the Polls button's look and fit rules (.polls-btn, .polls-btn-label); on a phone it takes its own column before the filter. */
 @media (max-width: 600px) {
   .calendar-toolbar:has(.outings-btn) { grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
   .calendar-toolbar .outings-btn.btn { grid-column: 4; }
   .calendar-toolbar:has(.outings-btn) .filter-btn { grid-column: 5; }
-  .calendar-toolbar .board-layout-pick.btn { max-width: 100%; } /* its column, not its own 16rem cap, so the buttons beside it never overlap */
 }
-/* The narrowest phones (an iPhone SE's 320px): the Board's layout button keeps its icon, its words go,
-   and the toolbar's gaps tighten so the view, layout, Polls, Outings and filter buttons all fit whole. */
+/* The narrowest phones (an iPhone SE's 320px): the toolbar's gaps tighten so every button fits whole. */
 @media (max-width: 340px) {
   .calendar-toolbar { gap: 4px; }
   .calendar-toolbar .view-pick.btn { padding-inline: 10px; }
-  .calendar-toolbar .board-layout-pick.btn { gap: 0; padding-inline: 11px; }
-  .calendar-toolbar .board-layout-pick > span { max-width: 0; } /* kept at no width, like data-chips="tight", so Board.tsx still measures it */
 }
-/* A phone on its side under ~820px: the view tabs plus Family wall, Polls and Outings with their
-   words don't fit beside the rail, and the tabs were cut off. Polls and Outings show their icons (their
-   names stay as aria-labels), and under ~720px Family wall does too. */
-@media (max-height: 500px) and (orientation: landscape) and (max-width: 819px) {
+/* Calendar locked to one view (This display → Lock view) on a phone or portrait tablet: no switch,
+   so paging, the period, Show hidden and the filter fit one row. */
+@media (max-width: 960px) {
+  .cal-toolbar.locked { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .cal-toolbar.locked .toolbar-nav { grid-column: 1; grid-row: 1; justify-self: start; }
+  .cal-toolbar.locked .toolbar-end { display: contents; }
+  .cal-toolbar.locked .hidden-toggle { grid-column: 2; grid-row: 1; }
+  .cal-toolbar.locked .filter-btn { grid-column: 3; grid-row: 1; }
+}
+/* A phone on its side: Calendar's view switch, paging and the period share one row, the period
+   giving way first (ellipsis); under ~760px wide paging and the period take a second row. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cal-toolbar .toolbar-nav { min-width: 0; max-width: 100%; }
+  .cal-toolbar .period-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 759px) {
+  .cal-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .cal-toolbar .toolbar-end { grid-column: 2; grid-row: 1; }
+  .cal-toolbar .toolbar-nav { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
+}
+/* A phone on its side under ~720px: Polls and Outings show their icons (their names stay as aria-labels). */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 719px) {
   .calendar-toolbar .polls-btn-label { display: none; }
   .calendar-toolbar .polls-btn.btn { padding: 6px 12px; }
-}
-@media (max-height: 500px) and (orientation: landscape) and (max-width: 719px) {
-  .calendar-toolbar .board-layout-pick.btn { gap: 0; padding-inline: 12px; }
-  .calendar-toolbar .board-layout-pick > span { max-width: 0; } /* kept at no width, like data-chips="tight", so Board.tsx still measures it */
 }
 .sheet-link > .poll-row-emoji { flex: none; font-size: 1.25rem; }
 .poll-meta { margin: 0 0 12px; color: var(--text-dim); font-weight: 700; }
@@ -3816,6 +3802,10 @@ button.tab-btn { font: inherit; font-size: 0.8125rem; font-weight: 700; cursor: 
 
 /* Calendar */
 :root[data-density="compact"] .calendar-toolbar { padding: 4px 10px 2px; }
+/* The view switches draw at 34px (a 44px tap through .segmented button's ::after, "Pointer and hover"). */
+:root[data-density="compact"] .calendar-toolbar .view-switch { padding: 3px; }
+:root[data-density="compact"] .calendar-toolbar .view-switch button { min-height: 34px; padding: 4px 12px; font-size: 0.8125rem; }
+:root[data-density="compact"] .sheet-group-gap { margin-top: 14px; }
 :root[data-density="compact"] .schedule-list { padding-top: 4px; }
 :root[data-density="compact"] .schedule-day-label { padding-top: 2px; }
 :root[data-density="compact"] .schedule-item { padding: 6px 10px; }

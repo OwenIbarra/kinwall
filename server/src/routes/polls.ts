@@ -120,7 +120,7 @@ function execCtx(c: Context<{ Bindings: Env }>): WaitCtx | undefined {
 /** "New poll: Which movie tonight?" in the bell, and pushed to every device that has notifications on. */
 function notifyPoll(c: Context<{ Bindings: Env }>, poll: Poll): void {
   waitUntil(execCtx(c), (async () => {
-    const n = { title: `🗳 New poll: ${poll.question}`, body: poll.options.map((o) => o.label).join(' · '), url: `/#/calendar?poll=${encodeURIComponent(poll.id)}` };
+    const n = { title: `🗳 New poll: ${poll.question}`, body: poll.options.map((o) => o.label).join(' · '), url: `/#/home?poll=${encodeURIComponent(poll.id)}` };
     await recordNotification(c.env.DB, { kind: 'poll', ...n, source: 'system' });
     for (const sub of await loadSubs(c.env.DB)) await sendToSub(c.env, c.env.DB, sub, { ...n, tag: `poll:${poll.id}` });
   })());

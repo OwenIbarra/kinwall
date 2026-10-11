@@ -1,6 +1,6 @@
 # Home & calendar
 
-**Home** is the main screen, first in the navigation (the 🏠 house). It holds the Board, the calendar and the schedule, and merges every enabled calendar into them. Each event is colored by its [category](categories.md), or by its family member if it has no category.
+**Home** is the main screen, first in the navigation (the 🏠 house): the Board and Newscast. **Calendar** is second (the 📅 page): Day, Week, Month and Schedule. Both merge every enabled calendar. Each event is colored by its [category](categories.md), or by its family member if it has no category.
 
 ![Board view on the wall iPad](../screenshots/ipad-board.png)
 
@@ -8,13 +8,13 @@
 
 **New events** go on the family's default calendar unless you pick another in the event sheet: a parent sets it in [Settings → Calendars](../settings/calendars.md#calendars), and until then it's the family's own Kinwall calendar rather than an imported one (a school feed or a meal kit's deliveries). See [Events](events.md#creating-and-editing).
 
-**A calendar that stops syncing:** on a parent's device, Home shows a warning at the top ("⚠️ The Work calendar isn't syncing") when a connected calendar has failed to sync twice in a row (one blip doesn't count), or an imported one still needs reconnecting. **Repair the connection** opens Settings → Calendars, where the calendar shows what went wrong. The warning goes away once it syncs again. Wall screens and kids' devices don't show it.
+**A calendar that stops syncing:** on a parent's device, Home and Calendar show a warning at the top ("⚠️ The Work calendar isn't syncing") when a connected calendar has failed to sync twice in a row (one blip doesn't count), or an imported one still needs reconnecting. **Repair the connection** opens Settings → Calendars, where the calendar shows what went wrong. The warning goes away once it syncs again. Wall screens and kids' devices don't show it.
 
 ## Views
 
-Home has four tabs at the top: **Board**, **Calendar**, **Schedule** and **Newscast**. Tap **Calendar** and it opens out, right beside it, into **Day**, **Week** and **Month**; the one you're on is tinted and underlined. Calendar opens the view you used last on that device (Week the first time), and tapping it again while it's open keeps that view. Board, Schedule and Newscast fold it back up. **Newscast** goes when the family turns it off in [Features](../settings/general.md#features).
+Home has two tabs at the top: **Board** and **Newscast**. **Newscast** (and with it the tabs) goes when the family turns it off in [Features](../settings/general.md#features).
 
-On a phone the tabs don't fit, so one button shows the current view (like **Board ⌄**): tap it, and a sheet lists **Board**, **Calendar** with **Day**, **3 Day** and **Month** side by side in it, **Schedule** and **Newscast**, with a line on what each shows and the current one marked. Tap any of them to switch to it.
+Calendar has four: **Day**, **Week** (**3 Day** on a phone), **Month** and **Schedule**. It opens the view you used last on that device; the first time, that's **Week** on a tablet or wall screen and **Schedule** on a phone. With big text, or on a phone as narrow as 320 pixels, the four don't fit in a row, so one button shows the current view (like **3 Day ⌄**) and opens a sheet of all four, with a line on what each shows.
 
 | View | Shows | Paging (◀ ▶ or swipe) |
 |---|---|---|
@@ -26,7 +26,9 @@ On a phone the tabs don't fit, so one button shows the current view (like **Boar
 | **Schedule** | An agenda of the next 30 days, grouped by day. Location lines link to maps. | ±30 days |
 | **Newscast** | What the family did and shared: chores done, rewards, photos, books and announcements, with reactions. See [Newscast](newscast.md). | None: the last 7 days, then **Earlier this month** |
 
-Every device opens Home on **Board**. You can switch views any time, and a display can be locked to any view (Settings → General → This display → Lock view), which hides the tabs. Links to `#/calendar` (notifications, widgets, [Home Assistant](../integrations/home-assistant.md)) open Home, as does `#/home`.
+Every device opens Home on **Board**. A display can be locked to any view (Settings → General → This display → [Lock view](../settings/this-display.md#this-display)), which hides the tabs: locked to Board or Newscast, it has no Calendar button; locked to Day, Week, Month or Schedule, Calendar takes Home's place in the navigation and is where the screen goes back to when idle.
+
+Links: `#/home` opens Home, `#/calendar` opens Calendar in its last view, and `#/calendar/day`, `/week`, `/month` or `/schedule` open that view.
 
 <p>
   <img src="../screenshots/phone-3day.png" width="32%" alt="3 Day view on a phone" />
@@ -65,7 +67,7 @@ Across the top, count tiles sum things up; tap one to open its screen (on a phon
 
 With one list of a type, its tile shows the list's emoji and name and opens it; with several, it opens the Lists page.
 
-With only one or two of these tiles, they don't take a whole row: they sit on the Board's toolbar as buttons beside **Family wall**, **Polls** and the filter (**🛒 Groceries 1**, **🔨 Hardware store 4**), and the cards move up. When the toolbar is too tight for their names, each shows just its emoji and count, and when even that doesn't fit (a phone on its side with large text), **Family wall** and **Polls** show just their icons too. A tablet standing up gives them a row under the toolbar; a phone on its side keeps them on the toolbar's row. Three or more stay a row of tiles, and so do they on a phone, whose toolbar has no room.
+With only one or two of these tiles, they don't take a whole row: they sit on the Board's toolbar as buttons beside **Polls**, **Outings** and **Layout and filter** (**🛒 Groceries 1**, **🔨 Hardware store 4**), and the cards move up. When the toolbar is too tight for their names, each shows just its emoji and count, and when even that doesn't fit (a phone on its side with large text), **Polls** and **Outings** show just their icons too. A tablet standing up gives them a row under the toolbar; a phone on its side keeps them on the toolbar's row. Three or more stay a row of tiles, and so do they on a phone, whose toolbar has no room.
 
 Things about today follow right after today's events in the **Today** card (any spare room is at the bottom of the card), in this order:
 
@@ -109,7 +111,7 @@ Each row goes once it's done, and the card goes when none are left. **Not now** 
 
 Each screen can arrange its own Board. Under [Settings → This display → Board layout](../settings/this-display.md#this-display), pick a built-in layout (**Kids** with big text, **Kitchen** with meals up front, **Parents** with more on the screen, **Simple** with just the clock, a picture and today), one of the family's [presets](../settings/general.md#board-presets), or **Own layout** to make one just for this screen.
 
-To switch quickly, tap the **layout** button at the end of the Board's toolbar (on a phone, next to the view button): a sheet lists the same layouts (and **Own layout**, once this screen has one), and **Manage layouts** goes to Settings (to **Board presets** on a parent device, to **Board layout** under This display otherwise). The button is hidden when the screen's view is locked under **Lock view**, so a locked wall stays as set.
+To switch quickly, tap **Layout and filter** (the sliders at the end of Home's toolbar). Its **Layout on this screen** chips list the same layouts, with a line under them on the one picked, and the Board changes behind the sheet as you tap. **Own layout…** opens the editor the first time; once this screen has one, **Edit this screen's layout** shows. **Manage layouts** goes to Settings (to **Board presets** on a parent device, to **Board layout** under This display otherwise). Under the layouts are the [categories](#filtering-by-category). On a screen locked under **Lock view**, the button is just the category filter, so a locked wall stays as set.
 
 The layout editor shows the Board as columns of cards (1 to 4 columns, up to 6 cards in each):
 
@@ -154,12 +156,12 @@ You can turn it off per device under [Time cues](../settings/this-display.md#tim
 * **◀ / ▶** or **swipe** left and right to page. The new period slides in from the side you swiped toward.
 * **Today** jumps back to the current date.
 * Tap a **day header** (Week) or a **day cell** (Month) to open that day in Day view.
-* On a phone, a Month day is too small to aim at one event, so tapping anywhere in it (its events too) opens that day in Day view, where every event is big enough to tap. A **‹ Month** button next to the view button goes back to the month (**‹ 3 Day** when you came from 3 Day). On tablets and wall screens, tapping an event in Month still opens it, and the rest of the day (or "+N more") opens the day.
-* Tapping **Calendar** again on a day you opened from Week or Month goes back to that view. A day you open this way doesn't change which view **Calendar** opens next time.
+* On a phone, a Month day is too small to aim at one event, so tapping anywhere in it (its events too) opens that day in Day view, where every event is big enough to tap. **Month** in the view tabs goes back to the month (with big text, a **‹ Month** button beside the view button does, or **‹ 3 Day** when you came from 3 Day). On tablets and wall screens, tapping an event in Month still opens it, and the rest of the day (or "+N more") opens the day.
+* A day you open this way doesn't change which view **Calendar** opens next time. Leaving Calendar forgets it: you come back to today in the last view you picked.
 * Tap an **empty slot** in the time grid to add an event at that time, or tap the **+** button. **+** adds to the day you're looking at: in Day view, that day; in Week, 3 Day and Month, today if it's on screen, else the first day shown; on the Board, today. On today it starts at the next half hour, on another day at 9 AM. On the Board, the cards keep their rows out from under **+** (what would sit there moves into **+N more**), and a Board that scrolls leaves room to scroll past it. Newscast has no **+**.
 * Tap an **event** to open its detail sheet. See [Events](events.md).
 * Keyboard: arrow keys move between day headers, and Enter opens the day.
-* After 2 minutes idle, a wall screen or kid's device goes back to Home, on the Board (or the locked view) on today and closes any open sheet, except while an activity, [Get stuff done](lists.md#get-stuff-done), [cooking mode](meals.md#start-cooking) or [shopping mode](lists.md#shopping-mode) is open. Parents' phones and computers don't, unless you turn on **Back to Home when idle** on that device ([Settings → General → This display](../settings/this-display.md#this-display)). It can be turned off on a wall screen the same way.
+* After 2 minutes idle, a wall screen or kid's device goes back to Home, on the Board (or to Calendar on today, on a display locked to a calendar view) and closes any open sheet, except while an activity, [Get stuff done](lists.md#get-stuff-done), [cooking mode](meals.md#start-cooking) or [shopping mode](lists.md#shopping-mode) is open. Parents' phones and computers don't, unless you turn on **Back to Home when idle** on that device ([Settings → General → This display](../settings/this-display.md#this-display)). It can be turned off on a wall screen the same way.
 
 ## Filters
 
@@ -180,16 +182,16 @@ Tap the family button at the top left. The family sheet lists everyone, with how
 * **Tap a person** to open [their day](snapshot.md), where you can also tick off their chores.
 * **The round button** on the right shows only them on the calendar: it fills in, the row says "Calendar shows only them", and their face moves to the front of the pile on the family button. Tap it again to show the whole family.
 
-On phones, the view button sits just under the header, in one row with the Board's layout button (on the Board), **Show hidden** and the filter. Day, 3 Day, Month and Schedule add a second row with ◀ **Today** ▶ and the dates shown.
+On phones, Home's toolbar is one row: **Board | Newscast**, then **Polls**, **Outings** and **Layout and filter**. Calendar's is two: **Day | 3 Day | Month | Schedule** across the first, then ◀ **Today** ▶, the dates shown, **Show hidden** and the filter. (With big text the view button takes the first row, beside **Show hidden** and the filter.)
 
 ### By category
 
-When any categories exist, a **filter** button appears in the toolbar. It opens **Show categories**:
+When any categories exist, a **filter** button (the funnel) appears in Calendar's toolbar. It opens **Show categories**. On Home, the categories are in **Layout and filter** (the sliders), under the layouts:
 
 * Pick one or more categories. **No category** matches events without one.
 * With nothing picked, every event shows. **Show all** clears the selection.
 * A badge on the button shows how many categories are picked.
-* The filter is saved **per device**. A wall display can hide work events for good while phones still see everything.
+* The filter is saved **per device**, one for Home and Calendar together. A wall display can hide work events for good, on the Board and the calendar alike, while phones still see everything.
 * Categories deleted since you picked them are ignored, so a stale filter can't hide everything.
 
 The member and category filters combine, and every view honors both. To hide events for the whole family instead, see [Calendar filters](#calendar-filters) and [Hiding events](#hiding-events).
@@ -242,6 +244,6 @@ Who an event is for never depends on telling colors apart: the avatars always sh
 
 ## Opening from a notification
 
-Tapping a reminder notification opens `#/calendar?event=<id>&at=<start>`. The calendar jumps to that day and opens the event.
+Tapping a reminder notification (or **View** in the bell) opens `#/calendar?event=<id>&at=<start>`: Calendar, on that day in its last view (Month switches to Schedule), with the event open. Close it and you're looking at the event's day.
 
-`#/calendar?checkin=<member id>` opens that person's day at their check-in. See [Daily check-in](snapshot.md#daily-check-in).
+`#/home?checkin=<member id>` opens that person's day at their check-in, and `#/home?poll=<id>` (a new poll in the bell) opens that poll. See [Daily check-in](snapshot.md#daily-check-in).

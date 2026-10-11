@@ -2,6 +2,14 @@
 
 The full list of changes in every version is in the [changelog](https://github.com/JohnDuprey/kinwall/blob/main/CHANGELOG.md), and each version is on the [releases page](https://github.com/JohnDuprey/kinwall/releases). Self-hosting? See [Updating](self-hosting/updating.md) for how to move to a new version.
 
+## Coming in the next version
+
+* **Calendar has its own place** in the navigation, right after Home, with **Day | Week | Month |
+  Schedule** in one switch (3 Day on a phone). Home is now **Board | Newscast**, and the Board's
+  layouts moved into **Layout and filter** (the sliders on its toolbar), together with the category
+  filter. On a phone the bottom bar is Home, Calendar, Chores and Lists, and Contacts is first under
+  More. Reminders open Calendar on the event's day. See [Home & calendar](using/calendar.md#views).
+
 ## 1.1.0
 
 Kinwall is now more than a calendar on the wall: it's the family life organizer, for the day, the

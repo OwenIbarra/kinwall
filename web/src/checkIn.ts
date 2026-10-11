@@ -15,7 +15,7 @@ export function checkInLabel(state: CheckInState, points: number): string {
   return `I'm all caught up ✓ · +${points} point${points === 1 ? '' : 's'}`
 }
 
-/** Where a check-in link (#/calendar?checkin=<member>) lands in their day: the evening check from
+/** Where a check-in link (#/home?checkin=<member>) lands in their day: the evening check from
  * their evening time (goal check or battery), else the Temp check, else the daily check-in row. */
 export function checkInFocus(tc: TempCheckSettings | undefined, nowMinutes: number): 'evening' | 'temp' | 'checkin' {
   if (!tc?.on) return 'checkin'

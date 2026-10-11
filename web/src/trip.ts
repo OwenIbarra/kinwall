@@ -98,7 +98,7 @@ export function setShoppingModeList(listId: string | null) {
  * otherwise land on the calendar (a link to somewhere else wins). null = leave the hash alone. */
 export function resumeShoppingHash(hash: string): string | null {
   const id = shoppingModeList()
-  return id && ['', '#', '#/', '#/calendar', '#/lists'].includes(hash) ? `#/lists/${id}/shop` : null
+  return id && ['', '#', '#/', '#/home', '#/lists'].includes(hash) ? `#/lists/${id}/shop` : null
 }
 
 /** A store named in a link (#/lists/<id>/shop?store=<name>): one of the list's stores in any case,

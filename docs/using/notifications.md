@@ -78,7 +78,7 @@ Every notification Kinwall sends is also kept in the app, whether or not any dev
 
 ## Newscast isn't the bell
 
-[Newscast](newscast.md) is Home's fourth tab: what the family did and shared, to notice and celebrate. The bell is for things to act on. Newscast never sends a push, has no badge, isn't in the bell's feed, and reacting to something notifies no one. Posting an announcement doesn't send a notification either (use **Send a message** for that).
+[Newscast](newscast.md) is Home's second tab, beside the Board: what the family did and shared, to notice and celebrate. The bell is for things to act on. Newscast never sends a push, has no badge, isn't in the bell's feed, and reacting to something notifies no one. Posting an announcement doesn't send a notification either (use **Send a message** for that).
 
 ## Live Activities (Kinwall app for iPhone)
 

@@ -55,7 +55,7 @@ function dayLabel(dayKey: string, tz: string): string {
 function toHash(url: string): string {
   const i = url.indexOf('#')
   if (i >= 0) return url.slice(i)
-  return url === '/' || url === '' ? '#/calendar' : `#${url.startsWith('/') ? url : `/${url}`}`
+  return url === '/' || url === '' ? '#/home' : `#${url.startsWith('/') ? url : `/${url}`}`
 }
 
 /** Header bell: unread badge + the "Notifications" sheet (every notification Kinwall sent). */

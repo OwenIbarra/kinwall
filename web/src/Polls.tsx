@@ -1,7 +1,7 @@
 // Family polls (docs/using/polls.md; server: routes/polls.ts). Polls have no tab of their own: an open
 // poll shows in the Board's Today card, the Polls button on Home's Board lists them all (and starts one), a
 // poll tied to a meal shows in that Meals week cell, and the bell's "New poll" opens it
-// (#/calendar?poll=<id>, handled in Calendar.tsx). Votes show who picked what, with avatars.
+// (#/home?poll=<id>, handled in Calendar.tsx). Votes show who picked what, with avatars.
 //
 // Choices are typed ideas, or (with Meals on) recipes and restaurants from the binder.
 //

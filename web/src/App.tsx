@@ -7,7 +7,7 @@ import { dayStartDue } from './medications.ts'
 import { AppContext, useApp, type ToastAction } from './AppContext.tsx'
 import type { Category, Member, Settings } from './types.ts'
 import { rewardsOn, trackerKinds } from './types.ts'
-import { BookIcon, MoreIcon, BrushIcon, HomeIcon, ChoreIcon, CloudOffIcon, GiftIcon, ListIcon, MealIcon, MoonIcon, PersonIcon, SettingsIcon, TicketIcon } from './icons.tsx'
+import { BookIcon, CalendarIcon, MoreIcon, BrushIcon, HomeIcon, ChoreIcon, CloudOffIcon, GiftIcon, ListIcon, MealIcon, MoonIcon, PersonIcon, SettingsIcon, TicketIcon } from './icons.tsx'
 import CalendarView from './Calendar.tsx'
 import Chores from './Chores.tsx'
 import Lists from './Lists.tsx'
@@ -24,7 +24,8 @@ import AuthorizeScreen from './Authorize.tsx'
 import Setup, { readSetupResume, resumeAtPasskey } from './Setup.tsx'
 import { SHORT_LANDSCAPE, useIsPhone, useMediaQuery, usePhoneHeader } from './useIsPhone.ts'
 import { useNavMode, type NavMode } from './useNavMode.ts'
-import { readDeviceAppearance, setDeviceAppearance, useDeviceAppearance, useTheme } from './useTheme.ts'
+import { readDeviceAppearance, setDeviceAppearance, useDeviceAppearance, useTheme, type LockedView } from './useTheme.ts'
+import { lockedOut, meSlot, restingHash } from './calendarViews.ts'
 import { isWallScreen, nightScreenDue, parseDeviceKind, remoteNightAction, remoteNightKey, wallDefaultsOn, type RemoteNight } from './wallScreen.ts'
 import { pickAfterIdle } from './actingAs.ts'
 import { PIN_RE, pinWaitMs, pressPinKey } from './quietPin.ts'
@@ -59,7 +60,8 @@ import { applyScreenScale, appliedScale } from './screenScale.ts'
 import { Face, FacePic } from './Face'
 
 const NAV_ITEMS = [
-  { key: 'calendar', href: '#/calendar', label: 'Home', Icon: HomeIcon }, // the route keeps its old name: pushes, widgets and Home Assistant link to it
+  { key: 'home', href: '#/home', label: 'Home', Icon: HomeIcon },
+  { key: 'calendar', href: '#/calendar', label: 'Calendar', Icon: CalendarIcon }, // opens the view this device used last
   { key: 'chores', href: '#/chores', label: 'Chores', Icon: ChoreIcon },
   { key: 'lists', href: '#/lists', label: 'Lists', Icon: ListIcon },
   { key: 'contacts', href: '#/contacts', label: 'Contacts', Icon: PersonIcon },
@@ -79,25 +81,29 @@ type NavItem = { key: string; href: string; label: string; Icon: (p: object) => 
 
 /** The nav items this family has on (Settings → Features); Activities goes when every activity is
  * off and no added activity (`plugins`) is on, and Rewards goes with its own switch or with chores
- * and points. A member's own device gets "Me" (their profile) after Chores, so it stays on a
- * phone's bottom bar, and "Journal" while check-ins are on. */
-function navItems(s: Settings, me?: Member | null, plugins = false): NavItem[] {
-  const items: NavItem[] = NAV_ITEMS.filter(i => i.key === 'chores' ? s.features.chores : i.key === 'rewards' ? rewardsOn(s) : i.key === 'lists' ? s.features.lists : i.key === 'contacts' ? s.features.contacts : i.key === 'meals' ? s.features.meals : i.key === 'outings' ? s.features.outings !== false : i.key === 'trackers' ? trackerKinds(s).length > 0 : i.key === 'activities' ? shownActivities(s).length > 0 || plugins : true)
-  if (me) items.splice((items.findIndex(i => i.key === 'chores') + 1) || 1, 0, { key: 'profile', href: `#/profile/${me.id}`, label: 'Me', Icon: () => me.picture ? <Face m={me} className="nav-me nav-me-pic" aria-hidden="true" /> : <span className="nav-me" aria-hidden="true">{me.avatar || me.name[0]}</span> })
+ * and points. A display with Lock view loses Home or Calendar (calendarViews.ts lockedOut). A
+ * member's own device gets "Me" (their profile): after Chores on a kid's device (`kid`), so it stays
+ * on a phone's bottom bar, after Lists on a grown-up's (meSlot), and "Journal" while check-ins are on. */
+function navItems(s: Settings, me?: Member | null, plugins = false, lock?: LockedView, kid = false): NavItem[] {
+  const items: NavItem[] = NAV_ITEMS.filter(i => !lockedOut(i.key, lock)).filter(i => i.key === 'chores' ? s.features.chores : i.key === 'rewards' ? rewardsOn(s) : i.key === 'lists' ? s.features.lists : i.key === 'contacts' ? s.features.contacts : i.key === 'meals' ? s.features.meals : i.key === 'outings' ? s.features.outings !== false : i.key === 'trackers' ? trackerKinds(s).length > 0 : i.key === 'activities' ? shownActivities(s).length > 0 || plugins : true)
+  if (me) items.splice(meSlot(items.map(i => i.key), kid), 0, { key: 'profile', href: `#/profile/${me.id}`, label: 'Me', Icon: () => me.picture ? <Face m={me} className="nav-me nav-me-pic" aria-hidden="true" /> : <span className="nav-me" aria-hidden="true">{me.avatar || me.name[0]}</span> })
   // Their journal, just before Settings: on a phone it sits under More, so the everyday tabs keep their place.
   if (me && s.features.checkIns) items.splice(items.findIndex(i => i.key === 'settings'), 0, { key: 'journal', href: `#/journal/${me.id}`, label: 'Journal', Icon: () => <span className="nav-me" aria-hidden="true">📓</span> })
   return items
 }
 
 /** Where to send a link to a screen whose feature is off (a bookmark, a push, an old tab), or one
- * that moved, or null. `plugins`: an added activity is on (null while that's not known yet). */
-function featureRedirect(s: Settings, section: string, sub: string | undefined, plugins: boolean | null = null): string | null {
+ * that moved, or one a locked display can't show (`lock`), or null. `plugins`: an added activity is
+ * on (null while that's not known yet). */
+function featureRedirect(s: Settings, section: string, sub: string | undefined, plugins: boolean | null = null, lock?: LockedView): string | null {
+  const rest = restingHash(lock)
+  if (lockedOut(section, lock)) return rest
   if (section === 'activities' && sub === 'rewards') return '#/rewards' // rewards used to be an activity
-  if (section === 'medications' && !s.medications) return '#/calendar'
-  if ((section === 'journal' || section === 'insights') && !s.features.checkIns) return '#/calendar'
+  if (section === 'medications' && !s.medications) return rest
+  if ((section === 'journal' || section === 'insights') && !s.features.checkIns) return rest
   if (section === 'activities' && sub === 'plugin') return null // an activity chore's play link works whatever else is on
   if (section === 'chores' || section === 'rewards' || section === 'lists' || section === 'contacts' || section === 'meals' || section === 'outings' || section === 'trackers' || section === 'activities') {
-    if (!navItems(s, null, plugins !== false).some(i => i.key === section)) return '#/calendar'
+    if (!navItems(s, null, plugins !== false).some(i => i.key === section)) return rest
     if (section === 'trackers') { const on = trackerKinds(s); return sub && !on.includes(sub) && !(sub === 'library' && on.includes('reading')) ? `#/trackers/${on[0]}` : null } // the library comes with Reading
     if (sub && section === 'activities' && sub !== 'plugin' && !shownActivities(s).some(a => a.key === sub)) return '#/activities'
   }
@@ -162,9 +168,9 @@ const IDLE_MS = 2 * 60 * 1000
 export const IDLE_RESET_EVENT = 'kinwall:idle-reset'
 
 function useHashTab() {
-  const [tab, setTab] = useState(() => (location.hash.replace('#/', '').split('?')[0] || 'calendar'))
+  const [tab, setTab] = useState(() => (location.hash.replace('#/', '').split('?')[0] || 'home'))
   useEffect(() => {
-    const onHash = () => { setTab(location.hash.replace('#/', '').split('?')[0] || 'calendar'); tellAppHere() }
+    const onHash = () => { setTab(location.hash.replace('#/', '').split('?')[0] || 'home'); tellAppHere() }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
@@ -236,7 +242,7 @@ function QuietOverlay({ settings, wall, remote }: { settings: Settings; wall: bo
     events.forEach(ev => window.addEventListener(ev, touch))
     const stopTick = onMinute(() => setNow(new Date()))
     const onPreview = () => { setManual('preview'); announce('Previewing the Night screen for 20 seconds. Tap or press Escape to end.') }
-    const onStart = () => { setManual('hold'); if (hashPath(location.hash) !== '#/calendar') location.hash = '#/calendar'; announce('Night screen on. Tap or press any key to end.') }
+    const onStart = () => { setManual('hold'); const rest = restingHash(readDeviceAppearance().lockView); if (hashPath(location.hash) !== rest) location.hash = rest; announce('Night screen on. Tap or press any key to end.') }
     window.addEventListener(SAVER_PREVIEW_EVENT, onPreview)
     window.addEventListener(SAVER_START_EVENT, onStart)
     return () => { stopTick(); events.forEach(ev => window.removeEventListener(ev, touch)); window.removeEventListener(SAVER_PREVIEW_EVENT, onPreview); window.removeEventListener(SAVER_START_EVENT, onStart) }
@@ -801,7 +807,7 @@ function AdminSetupScreen({ token }: { token: string }) {
         <div className="gate-card">
           <Brand />
           <h1>You're the admin on this device 🎉</h1>
-          <button className="btn btn-primary btn-block" onClick={() => { location.hash = '#/calendar' }}>Continue</button>
+          <button className="btn btn-primary btn-block" onClick={() => { location.hash = '#/home' }}>Continue</button>
         </div>
       </div>
     )
@@ -1206,12 +1212,13 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
     return () => window.removeEventListener(IDLE_RESET_EVENT, onIdle)
   }, [wall])
 
-  // idle reset: 2 min of no touch/pointer/keyboard activity -> back to today's calendar, close sheets.
+  // idle reset: 2 min of no touch/pointer/keyboard activity -> back to Home's Board (or a locked display's calendar view), close sheets.
   // Never while someone is in a text field: a slow typist or a screen-reader user reading a form
   // mustn't lose it. Tabbing, typing and wheel-scrolling all count as activity.
   // It's for the wall: on by default for wall screens and kids' devices, off for a parent's
   // phone or computer (Settings → This device can change either).
   const idleReset = device.idleReset ?? wallDefaultsOn(parentDevice, device)
+  const lockView = device.lockView
   // Wall screens and kids' devices stay on; a parent's phone locks as usual unless its own switch says otherwise.
   const keepOn = device.keepAwake ?? wallDefaultsOn(parentDevice, device)
   useEffect(() => { holdAwake('device', keepOn) }, [keepOn])
@@ -1229,16 +1236,17 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
         // mode (hands in the dough). .cook-mode is both of the last two (GetStuffDone, CookingMode).
         if (location.hash.startsWith('#/activities/') || /^#\/lists\/[^/]+\/shop/.test(location.hash) || document.querySelector('.cook-mode, .shop-mode')) { reset(); return }
         window.dispatchEvent(new CustomEvent(IDLE_RESET_EVENT))
-        // Idle wall display drifts back to the calendar - but never away from an OAuth consent screen.
+        // Idle wall display drifts back to Home - but never away from an OAuth consent screen.
         // Already on it: left as is, query and all (an open mode's ?gsd= is Home's own).
-        if (hashPath(location.hash) !== '#/calendar' && location.hash !== '' && !location.hash.startsWith('#/authorize')) location.hash = '#/calendar'
+        const rest = restingHash(lockView)
+        if (hashPath(location.hash) !== rest && location.hash !== '' && !location.hash.startsWith('#/authorize')) location.hash = rest
       }, IDLE_MS)
     }
     reset()
     const events = ['pointerdown', 'touchstart', 'keydown', 'focusin', 'wheel']
     events.forEach(ev => window.addEventListener(ev, reset, { passive: true }))
     return () => { clearTimeout(timer); events.forEach(ev => window.removeEventListener(ev, reset)) }
-  }, [idleReset])
+  }, [idleReset, lockView])
 
   useEffect(() => {
     if (!toastMsg) return
@@ -1276,7 +1284,7 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
     if (!hasKey || builtInActivities) return
     api.getPlugins().then(l => setPluginsOn(l.some(p => p.enabled))).catch(() => { /* keep what we knew */ })
   }, [hasKey, builtInActivities, pollTick, manualTick])
-  const redirect = settings && featureRedirect(settings, section, sub, pluginsOn)
+  const redirect = settings && featureRedirect(settings, section, sub, pluginsOn, lockView)
   useEffect(() => { if (redirect) location.replace(redirect) }, [redirect])
   const tabLabel = section === 'profile' ? 'Profile' : section === 'journal' ? 'Journal' : section === 'insights' ? 'Insights' : section === 'medications' ? 'Medicines' : section === 'activities' && sub === 'paint' ? 'Paint' : section === 'activities' && sub === 'stickers' ? 'Sticker book' : section === 'activities' && sub === 'photos' ? 'Photos' : NAV_ITEMS.find(i => i.key === section)?.label ?? 'Home'
   const inApp = hasKey && !!settings && !wizardActive && (section === 'profile' || section === 'journal' || section === 'insights' || section === 'medications' || NAV_ITEMS.some(i => i.key === section))
@@ -1327,7 +1335,7 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
     )
   }
 
-  const nav = navItems(settings, members.find(m => m.id === meMemberId), !!pluginsOn)
+  const nav = navItems(settings, members.find(m => m.id === meMemberId), !!pluginsOn, lockView, ownerLocks)
   // "Me" is lit on their own profile only, not while looking at someone else's.
   const navTab = (section === 'profile' || section === 'journal') && sub !== meMemberId ? '' : section === 'medications' || section === 'insights' ? '' : section
   return (
@@ -1347,7 +1355,7 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
           <Header settings={settings} members={focusMember ? [focusMember] : members} selectedMemberId={effectiveMemberId} isAdmin={scope === 'admin'} wall={wall} />
           <main className="content" id="main" tabIndex={-1}>
             <h1 className="sr-only">{tabLabel}</h1>
-            {redirect ? null : section === 'profile' ? <Profile memberId={sub} /> : section === 'journal' ? <Journal memberId={sub} /> : section === 'insights' ? <Insights memberId={sub} /> : section === 'medications' ? <Medications memberId={sub} /> : section === 'activities' ? <Activities sub={sub} rest={rest} /> : section === 'rewards' ? <Rewards memberId={sub} /> : section === 'meals' ? <Meals /> : section === 'outings' ? <Outings /> : tab === 'chores' ? <Chores /> : section === 'lists' ? <Lists /> : section === 'contacts' ? <Contacts /> : section === 'trackers' ? <Trackers sub={sub} /> : tab === 'settings' ? <SettingsView /> : <CalendarView />}
+            {redirect ? null : section === 'profile' ? <Profile memberId={sub} /> : section === 'journal' ? <Journal memberId={sub} /> : section === 'insights' ? <Insights memberId={sub} /> : section === 'medications' ? <Medications memberId={sub} /> : section === 'activities' ? <Activities sub={sub} rest={rest} /> : section === 'rewards' ? <Rewards memberId={sub} /> : section === 'meals' ? <Meals /> : section === 'outings' ? <Outings /> : tab === 'chores' ? <Chores /> : section === 'lists' ? <Lists /> : section === 'contacts' ? <Contacts /> : section === 'trackers' ? <Trackers sub={sub} /> : tab === 'settings' ? <SettingsView /> : section === 'calendar' ? <CalendarView key="calendar" place="calendar" /> : <CalendarView key="home" place="home" />}
           </main>
           {navMode === 'bottom' && <Nav tab={navTab} mode={navMode} items={nav} toApprove={toApprove} rewardRequests={rewardRequests} />}
         </div>

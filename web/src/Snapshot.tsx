@@ -60,7 +60,7 @@ export default function SnapshotSheet({ member, onClose, toCheckIn }: { member: 
     return () => { canceled = true }
   }, [member.id, range, refreshTick])
 
-  // A check-in link (#/calendar?checkin=<member>): scrolled to that part of their day once it's there.
+  // A check-in link (#/home?checkin=<member>): scrolled to that part of their day once it's there.
   // Each card loads on its own, so wait a moment for the one that fits the time before taking another.
   useEffect(() => {
     if (!toCheckIn) return

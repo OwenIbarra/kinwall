@@ -1425,15 +1425,16 @@ function ScreenFocusRows({ display }: { display: boolean }) {
         <div className="settings-row-sub">{focus ? `Only ${focus.name}'s events, chores and lists show here${device.focusHideShared ? '' : ', plus ones with nobody assigned'}.` : focusLocked ? 'This display is shared by the whole family. A parent can change who it belongs to under Settings → Access.' : 'Pin this screen to one person — handy for a display in a bedroom.'}</div>
         <div className="device-pref-row">
           <span>Lock view</span>
-          {/* Home's views as its switcher shows them: Board, Calendar (Day, Week, Month), Schedule, Newscast. */}
-          <select className="settings-select" aria-label="Lock Home's view" value={device.lockView ?? ''} onChange={e => set({ lockView: (e.target.value || undefined) as LockedView | undefined })}>
+          {/* Home's views, then Calendar's. Locked to a calendar view, Calendar takes Home's place in the nav. */}
+          <select className="settings-select" aria-label="Lock view" value={device.lockView ?? ''} onChange={e => set({ lockView: (e.target.value || undefined) as LockedView | undefined })}>
             <option value="">Off</option>
-            <option value="board">Board</option>
+            <optgroup label="Home">
+              <option value="board">Board</option>
+              {settings.features.newscast !== false && <option value="newscast">Newscast</option>}
+            </optgroup>
             <optgroup label="Calendar">
               {CALENDAR_VIEWS.map(v => <option key={v} value={v}>{viewLabel(v, isPhone)}</option>)}
             </optgroup>
-            <option value="schedule">Schedule</option>
-            {settings.features.newscast !== false && <option value="newscast">Newscast</option>}
           </select>
         </div>
         <DeviceBoardLayoutRows />

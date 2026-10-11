@@ -13,7 +13,7 @@ import {
   normalizeLayout, removeCard, setColumnCount, SIZE_NAMES, unplaced, updateCard, type BoardLayout, type BoardPreset, type CardDensity,
   type CardSize, type Spot,
 } from './boardLayout.ts'
-import { CheckIcon, LayoutIcon, XIcon } from './icons.tsx'
+import { XIcon } from './icons.tsx'
 import type { List } from './types.ts'
 import Sheet from './Sheet.tsx'
 
@@ -229,36 +229,35 @@ function useLayoutChoice() {
   return { device, presets, choice, pick }
 }
 
-/** On the Board, at the end of the toolbar: this screen's layout, switched in a sheet, and Manage
- * layouts to Settings (not shown with Lock view on). */
-export function BoardLayoutPicker() {
+/** Home's Layout and filter sheet: this screen's Board layout as chips (the Board changes behind the
+ * sheet), the picked one's line under them, its own layout's editor, and Manage layouts in Settings. */
+export function LayoutChips({ onLeave }: { onLeave: () => void }) {
   const { parentDevice } = useApp()
   const { device, presets, choice, pick } = useLayoutChoice()
-  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const set = (patch: DeviceAppearance) => setDeviceAppearance({ ...device, ...patch })
   const options = [
     { id: '', name: 'Family wall', detail: 'The default: fits the cards to the screen' },
     ...BUILT_IN_PRESETS.map(p => ({ id: p.id, name: p.name, detail: PRESET_DETAIL[p.id] })),
     ...presets.map(p => ({ id: p.id, name: `${p.name} 🏠`, detail: 'The family’s preset' })),
-    ...(device.boardCustom ? [{ id: CUSTOM, name: 'Own layout', detail: 'Made on this screen' }] : []),
+    { id: CUSTOM, name: device.boardCustom ? 'Own layout' : 'Own layout…', detail: 'Made on this screen' },
   ]
-  const current = options.find(o => o.id === choice)?.name ?? 'Family wall'
   return (
     <>
-      <button type="button" className="btn btn-secondary board-layout-pick" aria-haspopup="dialog" aria-label={`Board layout: ${current}`} onClick={() => setOpen(true)}>
-        <LayoutIcon width={18} height={18} /><span>{current}</span>
-      </button>
-      {open && (
-        <Sheet title="Board layout" onClose={() => setOpen(false)}
-          actions={<a className="btn btn-secondary" href={`#/settings?tab=general&section=${parentDevice ? 'board-presets' : 'board-layout'}`} onClick={() => setOpen(false)}>Manage layouts</a>}>
-          <div className="sheet-links">
-            {options.map(o => (
-              <button key={o.id || 'default'} type="button" className="sheet-link" aria-pressed={o.id === choice} onClick={() => { pick(o.id); setOpen(false) }}>
-                <span>{o.name}<small>{o.detail}</small></span>{o.id === choice && <CheckIcon className="pick-check" />}
-              </button>
-            ))}
-          </div>
-        </Sheet>
-      )}
+      <div className="chip-row" role="group" aria-label="Layout on this screen">
+        {options.map(o => (
+          <button key={o.id || 'default'} type="button" className={`chip ${o.id === choice ? 'active' : ''}`} aria-pressed={o.id === choice}
+            onClick={() => { if (o.id === CUSTOM && !device.boardCustom) setEditing(true); else pick(o.id) }}>{o.name}</button>
+        ))}
+      </div>
+      <p className="settings-row-sub layout-detail">{options.find(o => o.id === choice)?.detail}</p>
+      <div className="layout-links">
+        {choice === CUSTOM && <button type="button" className="btn btn-secondary" aria-haspopup="dialog" onClick={() => setEditing(true)}>Edit this screen’s layout</button>}
+        <a className="btn btn-secondary" href={`#/settings?tab=general&section=${parentDevice ? 'board-presets' : 'board-layout'}`} onClick={onLeave}>Manage layouts</a>
+      </div>
+      {editing && <BoardEditor title="This screen’s Board" start={normalizeLayout(device.boardCustom ?? layoutFor(device.boardLayout, null, presets) ?? DEFAULT_LAYOUT)} presets={presets}
+        onClose={() => setEditing(false)}
+        onSave={layout => { set({ boardLayout: CUSTOM, boardCustom: layout }); setEditing(false); announce('Saved: this screen’s layout') }} />}
     </>
   )
 }

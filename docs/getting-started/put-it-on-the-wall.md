@@ -79,7 +79,7 @@ Kinwall needs a connection to your server whether it's installed or not. It does
 
 ## How the wall display behaves
 
-* After 2 minutes without a touch it goes back to Home (the Board, or its locked view) on today and closes any open sheet.
+* After 2 minutes without a touch it goes back to Home (the Board, or Calendar on today when it's locked to a calendar view) and closes any open sheet.
 * It checks for changes every 30 seconds (`GET /api/rev`), so edits from phones show up within about 30 seconds.
 * When a new version is deployed, a **Kinwall updated — tap to reload** banner appears.
 * **Settings** on a display shows **General** (the family cards and this device's cards) and **Family** (Members read-only, Categories). The **Calendars** and **Access** tabs are hidden. See [This display](../settings/this-display.md).
@@ -92,7 +92,7 @@ A Google Nest Hub (7", 1024×600), Nest Hub Max (10", 1280×800) or another Cast
 2. The first time, the display shows the sign-in screen. Tap **Set up a wall screen or kid's device** on the display and approve its code from a parent's phone, as in [Pair the display](#1-pair-the-display). The display keeps its key, so the next cast opens straight on Home.
 3. If you like, pick a [Board layout](../using/calendar.md#board-layouts) with fewer cards for this screen (**Settings → General → This display → Board layout**). Cast screen mode keeps whatever layout the display has.
 
-In cast screen mode Kinwall is drawn bigger, to read from across the kitchen: a bigger clock, Board text and buttons, and a side bar of six big buttons with the rest under **More**. The Board shares out the screen in its layout's columns instead of scrolling, and is drawn a little smaller when its cards still don't fit. Everything else works as on any wall screen: going back to Home after 2 idle minutes, and the [Night screen](../using/night.md) at night.
+In cast screen mode Kinwall is drawn bigger, to read from across the kitchen: a bigger clock, Board text and buttons, and a side bar of six big buttons (Home, Calendar, Chores, Lists, Contacts and Meals) with the rest under **More**; **🎟 Outings** is still on Home's toolbar. The Board shares out the screen in its layout's columns instead of scrolling, and is drawn a little smaller when its cards still don't fit. Everything else works as on any wall screen: going back to Home after 2 idle minutes, and the [Night screen](../using/night.md) at night.
 
 A cast page closes after a while (about 10 minutes on a Nest Hub, when nothing is playing) or when someone asks the display for something else. Keep it up with an automation that casts the address again when the display isn't showing it, every few minutes; Continuously Casting Dashboards does this on its own.
 

@@ -49,7 +49,7 @@ test('polls: a parent starts one with ideas and recipes; the bell says so; walls
   const feed = (await t.send('GET', '/api/notifications', undefined, t.leoKey)).body;
   assert.equal(feed[0].kind, 'poll');
   assert.equal(feed[0].title, '🗳 New poll: Where are we eating Friday?');
-  assert.equal(feed[0].url, `/#/calendar?poll=${poll.id}`);
+  assert.equal(feed[0].url, `/#/home?poll=${poll.id}`);
   for (const key of [t.leoKey, t.wallKey]) assert.equal((await t.send('POST', '/api/polls', { question: 'x', options: [{ label: 'a' }, { label: 'b' }] }, key)).status, 403);
   assert.equal((await t.send('POST', `/api/polls/${poll.id}/close`, {}, t.wallKey)).status, 403);
   assert.equal((await t.send('DELETE', `/api/polls/${poll.id}`, undefined, t.leoKey)).status, 403);

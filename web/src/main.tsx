@@ -5,7 +5,7 @@ import './fonts/fonts.css'
 import './styles.css'
 import { IMPORT_CONTACTS_EVENT, markNativeApp, receiveSharedContacts } from './native.ts'
 import { resumeShoppingHash } from './trip.ts'
-import { hashQuery, homeAlias, withHashParam } from './hashQuery.ts'
+import { hashQuery, withHashParam } from './hashQuery.ts'
 import { retryBoot } from './appUpdate.ts'
 import { applyScreenScale } from './screenScale.ts'
 import { castScreen, screenParam, withoutScreenParam } from './cast.ts'
@@ -51,7 +51,10 @@ if (MOCK) {
       if (q.get('skin')) prefs.skin = q.get('skin')
       if (q.get('lowstim')) prefs.lowStim = true
       localStorage.setItem('kinwall.deviceAppearance', JSON.stringify(prefs))
-      if (q.get('view')) sessionStorage.setItem('kinwall.demoView', q.get('view')!)
+      // Board and Newscast are Home's; Day, Week, Month and Schedule open Calendar in that view.
+      const view = q.get('view')
+      if (view === 'board' || view === 'newscast') sessionStorage.setItem('kinwall.demoView', view)
+      else if (view) location.hash = `#/calendar/${view}`
       if (q.get('clean')) sessionStorage.setItem('kinwall.demoClean', '1')
       if (q.get('go')) location.hash = '#' + q.get('go')!.replace(/^#/, '')
     } catch { /* storage blocked: fine */ }
@@ -96,12 +99,6 @@ document.documentElement.toggleAttribute('data-cast', castNow)
 applyScreenScale(firstPrefs.screenScale, false, castNow)
 
 if (import.meta.env.DEV) import('./skins.ts').then(({ assertSkinsAA }) => assertSkinsAA())
-
-// #/home is Home's own name for #/calendar: swapped in place, before App (and its hashchange
-// listeners, registered later) reads the link.
-const toHome = () => { const h = homeAlias(location.hash); if (h) history.replaceState(null, '', h) }
-toHome()
-window.addEventListener('hashchange', toHome)
 
 // Reloaded in cooking mode started from a meal on Home: only Meals opens a recipe from a link, so
 // the recipe (and cooking mode, its cook param) comes back there.
