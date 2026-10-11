@@ -61,10 +61,11 @@ const MORE_SPACE = 50 // the More button (44px) and the gap above it
 /** A card's body that shows the rows that fit its space and a "+3 more" button for the rest, which
  *  opens the whole card in a sheet. Only a wall or tablet Board gives a card a fixed space; on a phone
  *  the card grows to its rows, so everything fits and nothing is cut. */
-function FitBody({ title, rows = ROWS, bodyClass = 'board-body', children }: { title: string; rows?: string; bodyClass?: string; children: React.ReactNode }) {
+function FitBody({ title, rows = ROWS, bodyClass = 'board-body', head, children }: { title: string; rows?: string; bodyClass?: string; head?: React.ReactNode; children: React.ReactNode }) {
   const wrap = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState<string | null>(null)
+  const [none, setNone] = useState(false) // no row fits: `head` shows above "Show 3"
   const [open, setOpen] = useState(false)
   const fit = useCallback(() => {
     const w = wrap.current, b = body.current
@@ -84,6 +85,7 @@ function FitBody({ title, rows = ROWS, bodyClass = 'board-body', children }: { t
     els.forEach((e, i) => { e.hidden = i >= shown })
     for (const d of days) d.hidden = !!d.querySelector('.snap-day-heading[hidden]') // a day whose rows all went
     setMore(shown < els.length ? moreLabel(info, shown) : null)
+    setNone(shown === 0 && els.length > 0)
   }, [rows])
   useLayoutEffect(fit) // every render: the rows may have changed
   // The body never stretches, so after a cut its own size can't tell it the space grew: watch the card
@@ -98,6 +100,7 @@ function FitBody({ title, rows = ROWS, bodyClass = 'board-body', children }: { t
   return (
     <div ref={wrap} className="board-fit">
       <div ref={body} className={bodyClass}>{children}</div>
+      {none && head}
       {more && <button className="btn btn-secondary board-more" aria-haspopup="dialog" onClick={() => setOpen(true)}>{more}</button>}
       {open && <Sheet title={title} onClose={() => setOpen(false)}><div className="board-sheet">{children}</div></Sheet>}
     </div>
@@ -675,9 +678,10 @@ function goalText(m: Member | undefined): { text: string; label: string } | null
   }
 }
 
-function TidbitBody({ trivia, fitKey, title, children }: { trivia: boolean; fitKey: string; title: string; children: React.ReactNode }) {
+/** `head`: the card's title when nothing else would say what it is (FitBody shows it once no row fits). */
+function TidbitBody({ trivia, fitKey, title, head, children }: { trivia: boolean; fitKey: string; title: string; head?: React.ReactNode; children: React.ReactNode }) {
   if (trivia) return <div className="board-fit"><div className="board-tidbit-body board-trivia-body">{children}</div></div>
-  return <FitBody key={fitKey} title={title} rows=".board-tidbit-body > *" bodyClass="board-tidbit-body">{children}</FitBody>
+  return <FitBody key={fitKey} title={title} rows=".board-tidbit-body > *" bodyClass="board-tidbit-body" head={head}>{children}</FitBody>
 }
 
 /** A quote / fact card. Trivia shows its question as tappable choices: a tap marks that guess
@@ -693,7 +697,8 @@ function TidbitCard({ tidbit, area, title, heading, density }: { tidbit: Tidbit;
       {title && heading && <h3 className="snap-heading">{title}</h3>}{/* one source: its tag already says what it is */}
       {/* Trivia keeps its answers on the card (answering happens right here), so it never trims rows
           into a "+N more" sheet; when space is tight its body scrolls instead. */}
-      <TidbitBody trivia={tidbit.kind === 'trivia'} fitKey={key} title={title ?? label}>
+      {/* Too small for even its first line, its tag goes with it: the title stays above "Show 1". */}
+      <TidbitBody trivia={tidbit.kind === 'trivia'} fitKey={key} title={title ?? label} head={!(title && heading) && <h3 className="snap-heading">{title ?? label}</h3>}>
         {tidbit.kind === 'quote' && <blockquote><p>“{tidbit.text}”</p><footer>— {tidbit.by}</footer></blockquote>}
         {tidbit.kind === 'fact' && <p><span className="board-tidbit-tag">💡 Did you know?</span> {tidbit.text}</p>}
         {tidbit.kind === 'tip' && <p><span className="board-tidbit-tag">🌱 Try this</span> {tidbit.text}</p>}

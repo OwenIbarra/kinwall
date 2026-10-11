@@ -32,6 +32,19 @@ test('areas: columns of cards, an empty or unavailable one closes up, tiles acro
   assert.deepEqual(layoutAreas(l, id => id !== 'tiles').shown[0], 'clock', 'no tiles to show: no tiles row')
 })
 
+test('areas: two or more columns never close up to one; the one left splits in two', () => {
+  const a = layoutAreas(L(false, ['clock', 'today', 'photo', 'tidbit'], ['tidbit3']), id => id !== 'tidbit3')
+  assert.equal(a.style['--board-cols-3'], 'repeat(2, minmax(0, 1fr))', 'the quote card that has nothing to say took its column')
+  assert.ok(a.style['--board-areas-3'].startsWith('"clock photo"'))
+  assert.ok(a.style['--board-areas-3'].endsWith('"today tidbit"'))
+  assert.deepEqual(a.shown, ['clock', 'today', 'photo', 'tidbit'], 'reading order stays')
+  assert.equal(layoutAreas(L(true, ['clock', 'today', 'photo'], []), () => true).style['--board-cols-3'], 'repeat(2, minmax(0, 1fr))', 'a column left empty')
+  const uneven = { tiles: false, columns: [[{ id: 'clock', size: 's' }, { id: 'today', size: 'l' }, { id: 'tidbit', size: 's' }], []] } as BoardLayout
+  assert.ok(layoutAreas(uneven, () => true).style['--board-areas-3'].startsWith('"clock today"'), 'split by size: a tie keeps the first column shorter')
+  assert.equal(layoutAreas(L(false, ['clock', 'today']), () => true).style['--board-cols-3'], 'repeat(1, minmax(0, 1fr))', 'a one-column layout stays one')
+  assert.equal(layoutAreas(L(false, ['clock'], ['meals']), id => id !== 'meals').style['--board-cols-3'], 'repeat(1, minmax(0, 1fr))', 'one card left: one column')
+})
+
 test('which layout a screen shows', () => {
   const family = [{ id: 'fam1', name: 'Hallway', layout: L(false, ['today']) }]
   assert.equal(layoutFor(undefined, null, family), null, 'the default arrangement')

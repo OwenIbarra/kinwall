@@ -85,10 +85,18 @@ export function rowSpans(sizes: CardSize[]): number[] {
 
 /** The Board's grid for a layout (the same custom properties boardAreas sets), with only the cards
  * that can show (`can`: a feature that's off, a quote card with nothing to say, no tiles to show).
- * A column left empty goes and the others widen. `shown`: the cards on the Board, in reading order
+ * A column left empty goes and the others widen, but never down to one column. `shown`: the cards on the Board, in reading order
  * (column by column), which is also the order on a phone. */
 export function layoutAreas(layout: BoardLayout, can: (id: BoardCardId | 'tiles') => boolean): { shown: string[]; style: Record<string, string>; density: Map<string, CardDensity> } {
-  const cols = layout.columns.map(col => col.filter(x => can(x.id))).filter(col => col.length)
+  let cols = layout.columns.map(col => col.filter(x => can(x.id))).filter(col => col.length)
+  // Two or more columns never close up to one (the others' cards can't show, or a column was left
+  // empty): one long column runs off a short screen, so its cards split in two, the halves as even as they go.
+  if (cols.length === 1 && layout.columns.length > 1 && cols[0].length > 1) {
+    const w = cols[0].map(x => WEIGHT[x.size]), total = w.reduce((a, b) => a + b, 0)
+    let k = 1, top = w[0]
+    while (k < w.length - 1 && Math.abs(2 * (top + w[k]) - total) < Math.abs(2 * top - total)) top += w[k++]
+    cols = [cols[0].slice(0, k), cols[0].slice(k)]
+  }
   const tiles = layout.tiles && can('tiles')
   const flat = cols.flat().map(x => x.id)
   const shown = [...(tiles ? ['tiles'] : []), ...flat]
