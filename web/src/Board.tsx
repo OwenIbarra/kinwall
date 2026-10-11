@@ -273,7 +273,7 @@ export default function Board({ show, onTap, chipHost }: { show: (e: EventInstan
       setBig(e.contentRect.width >= FULL_W && e.contentRect.height >= FULL_H)
       setRoomFor(tidbitCardsThatFit(e.contentRect.width, e.contentRect.height))
       setBoardW(e.contentRect.width)
-      setFixed(boardFixed(e.contentRect.width, matchMedia('(min-height: 700px)').matches, cast))
+      setFixed(boardFixed(e.contentRect.width, matchMedia('(min-height: 640px)').matches, cast))
     })
     ro.observe(el)
     return () => ro.disconnect()

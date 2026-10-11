@@ -70,7 +70,7 @@ export function tidbitCardsThatFit(width: number, height: number): number {
 }
 
 /** Whether the Board shares out the screen's height in columns that don't scroll (styles.css, the
- *  `data-fixed` board): a wall or a tablet on its side, 880px wide and 700 tall; shorter, it stays
+ *  `data-fixed` board): a wall or a tablet on its side, 880px wide and 640 tall; shorter, it stays
  *  two columns that scroll. A cast screen (a Nest Hub, 600px tall, nobody to scroll it) always
  *  shares it out once there's room for two columns, in its own layout's columns. */
 export const boardFixed = (width: number, tall: boolean, cast = false) => cast ? width >= 620 : width >= 880 && tall
