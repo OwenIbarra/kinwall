@@ -82,7 +82,7 @@ test('outing-rules: ages, "for me" boxes, weekends, past and filters', () => {
 
 test('outings: who adds, edits and deletes; walls only read; kids edit their own', async () => {
   const t = await setup();
-  const fest = await t.send('POST', '/api/outings', { title: 'Maple Grove Fall Fest', startsOn: '2026-10-10', startTime: '10:00', endTime: '16:00', placeName: 'Town Green', priceCents: 0, audience: ['family'], categoryId: 'oc-fairs' });
+  const fest = await t.send('POST', '/api/outings', { title: 'Maple Grove Fall Fest', startsOn: `${year + 1}-10-10`, startTime: '10:00', endTime: '16:00', placeName: 'Town Green', priceCents: 0, audience: ['family'], categoryId: 'oc-fairs' });
   assert.equal(fest.status, 201, JSON.stringify(fest.body));
   assert.equal(fest.body.kind, 'upcoming');
   assert.equal(fest.body.source, 'manual');
@@ -113,8 +113,8 @@ test('outings: who adds, edits and deletes; walls only read; kids edit their own
 
 test("outings: grown-ups-only ones stay off kids' devices unless they name the kid", async () => {
   const t = await setup();
-  const beer = (await t.send('POST', '/api/outings', { title: 'Pop-up beer garden', audience: ['grownups'], startsOn: '2026-10-10' })).body;
-  const concert = (await t.send('POST', '/api/outings', { title: 'Grown-up concert, Maya ushering', audience: ['grownups'], memberIds: [t.maya.id], startsOn: '2026-10-10' })).body;
+  const beer = (await t.send('POST', '/api/outings', { title: 'Pop-up beer garden', audience: ['grownups'], startsOn: `${year + 1}-10-10` })).body;
+  const concert = (await t.send('POST', '/api/outings', { title: 'Grown-up concert, Maya ushering', audience: ['grownups'], memberIds: [t.maya.id], startsOn: `${year + 1}-10-10` })).body;
   const mayas = (await t.send('GET', '/api/outings', undefined, t.mayaKey)).body.map((o: any) => o.title);
   assert.deepEqual(mayas, ['Grown-up concert, Maya ushering']);
   assert.equal((await t.send('GET', `/api/outings/${beer.id}`, undefined, t.mayaKey)).status, 404);
