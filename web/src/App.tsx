@@ -26,6 +26,7 @@ import { SHORT_LANDSCAPE, useIsPhone, useMediaQuery, usePhoneHeader } from './us
 import { useNavMode, type NavMode } from './useNavMode.ts'
 import { readDeviceAppearance, setDeviceAppearance, useDeviceAppearance, useTheme } from './useTheme.ts'
 import { isWallScreen, nightScreenDue, parseDeviceKind, remoteNightAction, remoteNightKey, wallDefaultsOn, type RemoteNight } from './wallScreen.ts'
+import { pickAfterIdle } from './actingAs.ts'
 import { PIN_RE, pinWaitMs, pressPinKey } from './quietPin.ts'
 import { inkFor } from './color.ts'
 import { loginWithPasskey, passkeysSupported, registerPasskey } from './webauthn.ts'
@@ -1197,6 +1198,13 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
   const meMemberId = members.some(m => m.id === owner) ? owner : null
   const effectiveMemberId = focusMember?.id ?? selectedMemberId
   const setMemberId = focusMember ? () => {} : setSelectedMemberId
+  // A wall's picked person lasts until it goes idle (and isn't kept across a reload): while picked,
+  // "Who?" prompts act as them (actingAs.ts). Pinned and personal devices keep theirs.
+  useEffect(() => {
+    const onIdle = () => setSelectedMemberId(p => pickAfterIdle(wall, p))
+    window.addEventListener(IDLE_RESET_EVENT, onIdle)
+    return () => window.removeEventListener(IDLE_RESET_EVENT, onIdle)
+  }, [wall])
 
   // idle reset: 2 min of no touch/pointer/keyboard activity -> back to today's calendar, close sheets.
   // Never while someone is in a text field: a slow typist or a screen-reader user reading a form
@@ -1325,6 +1333,7 @@ function AppRoutes({ urlKey }: { urlKey: string | null }) {
   return (
     <AppContext.Provider value={{
       settings, members, categories, selectedMemberId: effectiveMemberId, setSelectedMemberId: setMemberId,
+      actingMemberId: wall ? effectiveMemberId : null,
       focusMemberId: focusMember?.id ?? null, focusShowsShared: !device.focusHideShared, focusLocked: ownerLocks, meMemberId, parentDevice, parentPhone,
       refreshTick: pollTick + manualTick,
       reloadCore: () => setManualTick(t => t + 1),

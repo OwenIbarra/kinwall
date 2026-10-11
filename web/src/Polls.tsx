@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useId, useState } from 'react'
 import { api } from './api.ts'
 import { useApp } from './AppContext.tsx'
+import { actingMember } from './actingAs.ts'
 import { useDialog } from './dialog.tsx'
 import Sheet from './Sheet.tsx'
 import { Face } from './Face'
@@ -132,14 +133,17 @@ export function PollsSheet({ onClose }: { onClose: () => void }) {
 /** One poll: vote (picking who first on a shared screen), see who picked what, and for parents
  * close it and plan the winner. */
 export function PollSheet({ id, onClose }: { id: string; onClose: () => void }) {
-  const { members, parentDevice, meMemberId, settings, toast, refreshTick } = useApp()
+  const { members, parentDevice, meMemberId, actingMemberId, settings, toast, refreshTick } = useApp()
   const dialog = useDialog()
   const [poll, setPoll] = useState<Poll | null>(null)
   const [missing, setMissing] = useState(false)
   const [tick, setTick] = useState(0)
-  // A member's own device votes only for them; a parent's device starts on its owner; a wall on nobody.
-  const lockedTo = !parentDevice && meMemberId ? meMemberId : null
-  const [who, setWho] = useState<string | null>(lockedTo ?? (parentDevice ? meMemberId : null))
+  // A member's own device votes only for them; a wall votes as the person picked in its header (until
+  // it goes idle), else asks; a parent's device starts on its owner.
+  const acting = parentDevice || !meMemberId ? actingMember(actingMemberId, members)?.id ?? null : null
+  const lockedTo = !parentDevice && meMemberId ? meMemberId : acting
+  const [picked, setWho] = useState<string | null>(parentDevice ? meMemberId : null)
+  const who = lockedTo ?? picked
   const [busy, setBusy] = useState(false)
   const [closing, setClosing] = useState<string | null>(null) // the winner picked while closing
   const [planning, setPlanning] = useState<{ meal: Meal | null; initial: MealDraft; recipes: Recipe[] } | null>(null)
@@ -170,7 +174,9 @@ export function PollSheet({ id, onClose }: { id: string; onClose: () => void }) 
     setBusy(true)
     try {
       setPoll(await api.votePoll(poll.id, who, optionId)); changed()
-      if (!lockedTo && !parentDevice) { toast(optionId ? `${name(who)} voted for ${o.label}` : `${name(who)} took back their vote`); setWho(null) } // a shared wall: ready for the next person
+      // A shared wall: say who voted (and get ready for the next person unless someone's picked).
+      if (acting || !lockedTo && !parentDevice) toast(optionId ? `${name(who)} voted for ${o.label} ✓` : `${name(who)} took back their vote`)
+      if (!lockedTo && !parentDevice) setWho(null)
     } catch (e) { fail(e, 'vote') } finally { setBusy(false) }
   }
   const close = async () => {

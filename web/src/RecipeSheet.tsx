@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { useHashParam } from './hashQuery.ts'
 import { api, MOCK } from './api.ts'
 import { useApp } from './AppContext.tsx'
+import { actingMember } from './actingAs.ts'
 import { useDialog } from './dialog.tsx'
 import Sheet from './Sheet.tsx'
 import { BookIcon, CheckIcon, ChevronLeft, ChevronRight, EditIcon, ExternalIcon, FileIcon, LinkIcon, MinusIcon, PlusIcon } from './icons.tsx'
@@ -103,7 +104,7 @@ export const ratingOwner = (me: { scope: string; owner?: string | null } | null 
 
 /** Collapsed to the family average (open on a kid's own device, their row first); open it for each member's stars, tappable (tap the same star again to clear). A member's own device rates only for them. */
 function Ratings({ recipe, owner, onRated }: { recipe: Recipe; owner?: string | null; onRated?: () => void }) {
-  const { members, toast } = useApp()
+  const { members, toast, actingMemberId } = useApp()
   const [rating, setRating] = useState<RecipeRating>(recipe.rating ?? { average: null, count: 0, byMember: {} })
   const [busy, setBusy] = useState('')
   if (!members.length) return null
@@ -115,8 +116,10 @@ function Ratings({ recipe, owner, onRated }: { recipe: Recipe; owner?: string | 
   }
   // A kid's own device: rating dinner is the main thing they do here, so the stars start open with their row first.
   const kid = !!owner && owner !== 'shared'
-  const people = kid ? [...members].sort((a, b) => Number(b.id === owner) - Number(a.id === owner)) : members
-  return <details className="settings-disclosure recipe-ratings-box" open={kid || undefined}>
+  // A wall with someone picked in its header opens the same way, their row first.
+  const first = kid ? owner : actingMember(actingMemberId, members)?.id
+  const people = first ? [...members].sort((a, b) => Number(b.id === first) - Number(a.id === first)) : members
+  return <details className="settings-disclosure recipe-ratings-box" open={!!first || undefined}>
     <summary>{kid ? 'How did you like it?' : rating.average !== null ? `★ ${rating.average} · ${rating.count} rating${rating.count === 1 ? '' : 's'}` : 'Rate this recipe'}</summary>
     <ul className="recipe-ratings">{people.map(m => {
       const mine = rating.byMember[m.id] ?? 0

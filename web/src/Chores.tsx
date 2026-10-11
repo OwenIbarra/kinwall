@@ -4,6 +4,7 @@ import { addDays, format, isSameDay } from 'date-fns'
 import { GivePoints } from './GivePoints.tsx'
 import { useIsPhone } from './useIsPhone.ts'
 import { useApp } from './AppContext.tsx'
+import { actingMember } from './actingAs.ts'
 import { api, ApiError } from './api.ts'
 import type { Chore, ChoreDay, ChoreSuggestion, LeaderboardEntry, LeaderboardPeriod, List, PendingApproval, Plugin, Redemption } from './types.ts'
 import { MEMBER_EMOJI, rewardsOn } from './types.ts'
@@ -455,7 +456,8 @@ export default function Chores() {
   // Kids suggest chores: off a parent's device, for the person shown (else a wall asks who first).
   const [suggestFor, setSuggestFor] = useState<string | 'who' | null>(null)
   const canSuggest = !parentDevice && settings.features.chores && settings.kidChoreSuggestions
-  const suggester = selectedMemberId ?? focusMemberId
+  // Kids suggest chores (grown-ups when there are no kids): a picked grown-up still gets asked who.
+  const suggester = actingMember(selectedMemberId ?? focusMemberId, members, m => !m.grownUp || !members.some(x => !x.grownUp))?.id ?? null
   const [sentTick, setSentTick] = useState(0) // a new idea shows on its card straight away
 
   const key = dateKey(selectedDate)
@@ -516,8 +518,9 @@ export default function Chores() {
     if (!ticked && c.checklist && c.checklist.done < c.checklist.total) { setChecklistId(c.id); return }
     // An Anyone chore credits the filtered (or pinned) person; otherwise ask who did it.
     // `doneBy` null = "Nobody in particular" was picked.
+    const picked = !ticked && !c.memberId && doneBy === undefined ? actingMember(selectedMemberId, members) : null
     if (!ticked && !c.memberId && doneBy === undefined) {
-      if (selectedMemberId) doneBy = selectedMemberId
+      if (picked) doneBy = picked.id
       else if (members.length > 0) { setWhoFor(c); return }
     }
     const creditTo = c.memberId ?? doneBy ?? undefined
@@ -535,7 +538,9 @@ export default function Chores() {
       // Queued, so a tick works offline and syncs later; replays are idempotent (complete/undo for a date).
       if (ticked) await api.queueUncompleteChore(c.id, key)
       else await api.queueCompleteChore(c.id, key, creditTo)
-      if (late && !waits) toast(`+${pts} (late)`)
+      // Credited to the picked person without asking: say who, with a way back.
+      if (picked) toast(`${waits ? 'Sent for a parent’s OK' : 'Done!'} ✓ ${picked.name}${late && !waits ? ` · +${pts} (late)` : ''}`, false, { label: 'Undo', run: () => { void api.queueUncompleteChore(c.id, key).then(() => { load(); reloadCore() }, () => toast('Could not undo that', true)) } })
+      else if (late && !waits) toast(`+${pts} (late)`)
       reloadCore()
     } catch (e) {
       setChores(list => list.map(x => x.id === c.id ? { ...x, completed: c.completed, pending: c.pending, rejection: c.rejection } : x)) // revert

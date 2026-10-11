@@ -7,6 +7,7 @@ export interface AppCtx {
   categories: Category[]
   selectedMemberId: string | null
   setSelectedMemberId: (id: string | null) => void
+  actingMemberId: string | null // a wall screen's picked person, until it goes idle: "Who?" prompts act as them (actingAs.ts)
   focusMemberId: string | null // this display is pinned to one member (selectedMemberId is then that member)
   focusShowsShared: boolean // ...and still shows events/chores/lists assigned to nobody
   focusLocked: boolean // an admin set who this everyday-access device belongs to, so it can't pick its own

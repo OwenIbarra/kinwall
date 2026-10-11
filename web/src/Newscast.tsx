@@ -4,6 +4,7 @@
 // (refreshTick). Reactions show faces, never counts. Low-stimulation mode drops the pictures.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './AppContext.tsx'
+import { actingMember } from './actingAs.ts'
 import { api, ApiError } from './api.ts'
 import type { Member, Newscast, NewscastItem, NewscastReaction } from './types.ts'
 import { rewardsOn } from './types.ts'
@@ -28,7 +29,7 @@ function Face({ m, size = 'md' }: { m: Pick<Member, 'color' | 'avatar' | 'name' 
 }
 
 export default function NewscastView() {
-  const { settings, members, meMemberId, parentDevice, refreshTick, toast, reloadCore } = useApp()
+  const { settings, members, meMemberId, actingMemberId, parentDevice, refreshTick, toast, reloadCore } = useApp()
   const dialog = useDialog()
   const calm = !!useDeviceAppearance().lowStim
   const wide = useMediaQuery('(min-width: 900px)')
@@ -58,15 +59,19 @@ export default function NewscastView() {
     setFeed(f => f && { ...f, items: fix(f.items) })
     setOlder(o => o && fix(o))
   }
+  const acting = actingMember(actingMemberId, members)?.id // the wall's picked person (actingAs.ts)
   const react = async (item: NewscastItem, emoji: NewscastReaction, memberId: string) => {
     const on = !item.reactions.find(r => r.emoji === emoji)?.memberIds.includes(memberId)
     try {
       patchItem(item.key, (await api.reactNewscast({ itemKey: item.key, emoji, on, ...(meMemberId ? {} : { memberId }) })).reactions)
-      announce(`${on ? 'Reacted' : 'Took back'} ${REACTIONS.find(r => r.emoji === emoji)?.label}${meMemberId ? '' : ` as ${byId.get(memberId)?.name}`}`)
+      const said = `${on ? 'Reacted' : 'Took back'} ${REACTIONS.find(r => r.emoji === emoji)?.label}${meMemberId ? '' : ` as ${byId.get(memberId)?.name}`}`
+      if (!meMemberId && memberId === acting) toast(`${emoji} ${said}`) // a wall acting as its picked person says so
+      else announce(said)
     } catch (e) { fail(e, 'react') }
   }
-  // A person's own device reacts as them; a wall screen asks who, every time.
-  const tapReaction = (item: NewscastItem, emoji: NewscastReaction) => meMemberId ? react(item, emoji, meMemberId) : setReacting({ item, emoji })
+  // A person's own device reacts as them; a wall screen as the person picked in its header (until it
+  // goes idle), else it asks who, every time.
+  const tapReaction = (item: NewscastItem, emoji: NewscastReaction) => meMemberId ? react(item, emoji, meMemberId) : acting ? react(item, emoji, acting) : setReacting({ item, emoji })
 
   const setList = async (key: 'newscastNotFeatured' | 'newscastPostingPaused', id: string, on: boolean) => {
     const cur = settings[key] ?? []
@@ -255,10 +260,11 @@ function NewsItem({ item, byId, me, parent, calm, tz, paused, onReact, onModerat
 /** Share an announcement: 280 characters, an optional emoji and one photo. A person's own device
  * posts as them; a wall screen picks who. Grown-ups can keep one to grown-ups only. */
 function Composer({ inSheet, onPosted }: { inSheet: boolean; onPosted: () => void }) {
-  const { members, meMemberId, settings, toast } = useApp()
+  const { members, meMemberId, actingMemberId, settings, toast } = useApp()
   const [text, setText] = useState('')
   const [emoji, setEmoji] = useState('')
-  const [as, setAs] = useState(meMemberId ?? '')
+  const [picked, setAs] = useState(meMemberId ?? '')
+  const as = picked || actingMember(actingMemberId, members)?.id || '' // a wall starts on its picked person
   const [audience, setAudience] = useState<'everyone' | 'grownups'>('everyone')
   const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null) // uploaded on Share, so a dropped one never lands in family photos
   const [busy, setBusy] = useState(false)
@@ -279,7 +285,7 @@ function Composer({ inSheet, onPosted }: { inSheet: boolean; onPosted: () => voi
       }
       await api.postNewscast({ text: text.trim(), emoji: emoji || null, photoId, audience: who.grownUp ? audience : 'everyone', ...(meMemberId ? {} : { memberId: who.id }) })
       setText(''); setEmoji(''); pickPhoto(undefined); setAudience('everyone')
-      toast('Shared'); onPosted()
+      toast(meMemberId ? 'Shared' : `Shared ✓ ${who.name}`); onPosted()
     } catch (e) { toast(e instanceof Error ? e.message : 'Could not share that', true) } finally { setBusy(false) }
   }
   return (

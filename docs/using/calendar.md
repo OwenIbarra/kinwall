@@ -169,6 +169,8 @@ Tap a member's avatar in the header to open [their snapshot](snapshot.md). Its *
 
 While the filter is on, every view shows only that person's events, on the same grid. An event they share with others still shows everyone's avatars. The filter also applies to the Board and the Chores tab.
 
+On a wall screen, picking someone also says who's using it. Until the screen goes idle (2 minutes without a tap) or reloads, whatever needs a name is done as them, without asking "Who?": ticking off an **Anyone** chore, voting in a poll, marking interest in an outing, reacting to or sharing on the Family wall, suggesting a chore, playing an activity, starting a drawing and adding a note. The message that confirms it names them ("Done! ✓ Maya", with **Undo**), and polls and outings say "Voting as Maya" or "Marking for Maya". When the picked person can't do something (a grown-up suggesting a kid's chore), it asks as usual. With nobody picked, the wall asks every time. When the screen goes idle the pick clears, so the next person starts fresh. Picking someone only says who's doing things: it never shows their private things, like health or a grown-up's own notes. Phones, computers and screens pinned to one person keep their pick.
+
 #### On a phone
 
 Tap the family button at the top left. The family sheet lists everyone, with how many points they've earned today.

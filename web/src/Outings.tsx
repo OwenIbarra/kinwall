@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
 import { api } from './api.ts'
 import { useApp } from './AppContext.tsx'
+import { actingMember } from './actingAs.ts'
 import { useDialog } from './dialog.tsx'
 import { Segmented } from './a11y.tsx'
 import Sheet from './Sheet.tsx'
@@ -282,7 +283,7 @@ const longDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-
 
 /** One outing: when, where, cost, tickets, who it's for, interest marks, and (parents) Add to our calendar. */
 export function OutingSheet({ id, onClose, onEdit }: { id: string; onClose: () => void; onEdit?: (o: Outing) => void }) {
-  const { members, meMemberId, toast, refreshTick, settings } = useApp()
+  const { members, meMemberId, actingMemberId, toast, refreshTick, settings } = useApp()
   const who = useWho()
   const dialog = useDialog()
   const [o, setO] = useState<Outing | null>(null)
@@ -291,9 +292,11 @@ export function OutingSheet({ id, onClose, onEdit }: { id: string; onClose: () =
   const [tick, setTick] = useState(0)
   const [busy, setBusy] = useState(false)
   const [calendar, setCalendar] = useState(false)
-  // A member's own device marks only for them; a parent's device starts on its owner; a wall on nobody.
-  const lockedTo = !who.parent && meMemberId ? meMemberId : null
-  const [marker, setMarker] = useState<string | null>(lockedTo ?? (who.parent ? meMemberId : null))
+  // A member's own device marks only for them; a wall marks for the person picked in its header
+  // (until it goes idle), else asks; a parent's device starts on its owner.
+  const lockedTo = !who.parent && meMemberId ? meMemberId : actingMember(actingMemberId, members)?.id ?? null
+  const [picked, setMarker] = useState<string | null>(who.parent ? meMemberId : null)
+  const marker = lockedTo ?? picked
   useEffect(() => {
     const bump = () => setTick(t => t + 1)
     window.addEventListener(CHANGED, bump)
